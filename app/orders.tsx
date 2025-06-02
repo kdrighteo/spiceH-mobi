@@ -22,15 +22,17 @@ export default function OrdersScreen() {
         keyExtractor={item => item.id}
         ListEmptyComponent={<Text className="text-white text-center mt-8">No orders yet.</Text>}
         renderItem={({ item }) => (
-          <View className="bg-white rounded-xl p-4 mb-4 shadow">
-            <Text className="text-lg font-bold mb-1">Order #{item.id}</Text>
-            <Text className="text-gray-700 mb-1">Date: {new Date(item.date).toLocaleString()}</Text>
-            <Text className="text-gray-700 mb-2">Total: ${item.total.toFixed(2)}</Text>
-            <Text className="font-semibold mb-1">Items:</Text>
-            {item.items.map((prod, idx) => (
-              <Text key={idx} className="text-gray-800 text-sm">- {prod.name} x{prod.qty}</Text>
-            ))}
-          </View>
+          <TouchableOpacity onPress={() => router.push(`/orders/${item.id}`)}>
+            <View className="bg-white rounded-xl p-4 mb-4 shadow">
+              <Text className="text-lg font-bold mb-1">Order #{item.id}</Text>
+              <Text className="text-gray-700 mb-1">Date: {new Date(item.date).toLocaleString()}</Text>
+              <Text className="text-gray-700 mb-2">Total: ${item.total.toFixed(2)}</Text>
+              <Text className="font-semibold mb-1">Items:</Text>
+              {item.items.map((prod, idx) => (
+                <Text key={idx} className="text-gray-800 text-sm">- {prod.name} x{prod.qty}</Text>
+              ))}
+            </View>
+          </TouchableOpacity>
         )}
       />
     </View>

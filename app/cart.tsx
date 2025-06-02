@@ -27,13 +27,14 @@ export default function CartScreen() {
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setCheckingOut(true);
-    await addOrder(cart, total);
+    const orderId = Date.now().toString();
+    await addOrder(cart, total, promo.trim() ? promo.trim().toUpperCase() : undefined, discount);
     clearCart();
     setPromo('');
     setDiscount(0);
     setCheckingOut(false);
     Alert.alert('Order Placed', 'Your order has been placed!');
-    router.push('/orders');
+    router.push({ pathname: '/orders/success', params: { id: orderId } });
   };
 
   return (
