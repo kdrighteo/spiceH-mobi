@@ -7,6 +7,7 @@ import CartButton from '../components/CartButton';
 import { useFavorites } from '../../lib/favoritesContext';
 import FavoritesButton from '../components/FavoritesButton';
 import { getReviews, addReview, getAverageRating, Review } from '../../lib/reviews';
+import OrdersButton from '../components/OrdersButton';
 
 const TABS = [
   { key: 'usage', label: 'Usage' },
@@ -143,6 +144,7 @@ export default function ProductDetails() {
           <Text className="text-2xl">{isFavorite(product.id) ? '❤️' : '🤍'}</Text>
         </TouchableOpacity>
       </View>
+      <OrdersButton />
       <TouchableOpacity className="bg-black px-8 py-3 rounded-lg shadow-lg items-center mb-4" onPress={handleAddToCart}>
         <Text className="text-white text-lg font-semibold">Add to Cart</Text>
       </TouchableOpacity>

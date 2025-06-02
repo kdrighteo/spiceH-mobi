@@ -47,13 +47,16 @@ export default function OrderSuccessScreen() {
         </View>
       )}
       <View className="flex-row space-x-4 mt-4">
-        <TouchableOpacity className="bg-black px-4 py-2 rounded-lg" onPress={() => router.replace('/products')}>
+        <TouchableOpacity className="bg-black px-4 py-2 rounded-lg" onPress={() => router.push('/products')}>
           <Text className="text-white font-semibold">Continue Shopping</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="bg-white px-4 py-2 rounded-lg" onPress={() => router.replace('/orders')}>
+        <TouchableOpacity className="bg-white px-4 py-2 rounded-lg" onPress={() => router.push('/orders')}>
           <Text className="text-black font-semibold">View Orders</Text>
         </TouchableOpacity>
       </View>
+      <TouchableOpacity className="mt-6 px-4 py-2 rounded-lg bg-gray-200" onPress={() => router.back()}>
+        <Text className="text-black font-semibold">Back to Order History</Text>
+      </TouchableOpacity>
     </View>
   );
 } 
