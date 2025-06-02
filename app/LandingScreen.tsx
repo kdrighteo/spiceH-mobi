@@ -8,10 +8,22 @@ export default function LandingScreen() {
       <Text className="text-7xl mb-8">🍳</Text>
       <Text className="text-white text-4xl font-bold mb-8 font-serif tracking-widest">Spice-Haven</Text>
       <TouchableOpacity
-        className="bg-black px-8 py-3 rounded-lg shadow-lg"
+        className="bg-black px-8 py-3 rounded-lg shadow-lg mb-4"
         onPress={() => router.replace('/products')}
       >
         <Text className="text-white text-lg font-semibold">Shop</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        className="bg-white px-8 py-3 rounded-lg shadow-lg mb-2"
+        onPress={() => router.push('/SignUp')}
+      >
+        <Text className="text-black text-lg font-semibold">Sign Up</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        className="bg-white px-8 py-3 rounded-lg shadow-lg"
+        onPress={() => router.push('/Login')}
+      >
+        <Text className="text-black text-lg font-semibold">Log In</Text>
       </TouchableOpacity>
     </View>
   );

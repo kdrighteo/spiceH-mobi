@@ -5,6 +5,7 @@ import { products } from '../../lib/products';
 import CartButton from '../components/CartButton';
 import FavoritesButton from '../components/FavoritesButton';
 import OrdersButton from '../components/OrdersButton';
+import ProfileButton from '../components/ProfileButton';
 import { useFavorites } from '../../lib/favoritesContext';
 
 const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
@@ -72,6 +73,7 @@ export default function ProductList() {
           </TouchableOpacity>
         )}
       />
+      <ProfileButton />
       <OrdersButton />
       <FavoritesButton />
       <CartButton />
