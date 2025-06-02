@@ -28,17 +28,20 @@ export default function ProductList() {
         value={search}
         onChangeText={setSearch}
       />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-        {categories.map(cat => (
-          <TouchableOpacity
-            key={cat}
-            onPress={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 mr-2 rounded-full border ${selectedCategory === cat ? 'bg-black border-black' : 'bg-white border-gray-300'}`}
-          >
-            <Text className={selectedCategory === cat ? 'text-white font-bold' : 'text-black'}>{cat}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View className="mb-3 h-12 bg-white/80 rounded-xl flex-row items-center px-2">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }}>
+          {categories.map(cat => (
+            <TouchableOpacity
+              key={cat}
+              onPress={() => setSelectedCategory(cat)}
+              className={`px-3 py-1 mr-2 rounded-full border ${selectedCategory === cat ? 'bg-black border-black' : 'bg-white border-gray-300'}`}
+              style={{ minWidth: 60 }}
+            >
+              <Text className={selectedCategory === cat ? 'text-white font-semibold text-xs' : 'text-black text-xs'}>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
       <FlatList
         data={filtered}
         keyExtractor={item => item.id}
