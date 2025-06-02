@@ -1,11 +1,40 @@
 import { useCart } from '../lib/cartContext';
-import { View, Text, TouchableOpacity, Image, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, Image, FlatList, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { addOrder } from '../lib/orders';
 
 export default function CartScreen() {
-  const { cart, updateQty, removeFromCart } = useCart();
+  const { cart, updateQty, removeFromCart, clearCart } = useCart();
   const router = useRouter();
-  const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const [promo, setPromo] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [checkingOut, setCheckingOut] = useState(false);
+
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const total = subtotal - discount;
+
+  const handleApplyPromo = () => {
+    if (promo.trim().toUpperCase() === 'SPICE20') {
+      setDiscount(subtotal * 0.2);
+      Alert.alert('Promo Applied', '20% discount applied!');
+    } else {
+      setDiscount(0);
+      Alert.alert('Invalid Code', 'Promo code not valid.');
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    setCheckingOut(true);
+    await addOrder(cart, total);
+    clearCart();
+    setPromo('');
+    setDiscount(0);
+    setCheckingOut(false);
+    Alert.alert('Order Placed', 'Your order has been placed!');
+    router.push('/orders');
+  };
 
   return (
     <View className="flex-1 bg-red-600 pt-12 px-4">
@@ -33,9 +62,29 @@ export default function CartScreen() {
           </View>
         )}
       />
-      <View className="mt-auto mb-8">
+      <View className="mt-4 mb-2">
+        <TextInput
+          className="bg-white rounded-lg px-4 py-2 mb-2 text-base"
+          placeholder="Promo code"
+          value={promo}
+          onChangeText={setPromo}
+        />
+        <TouchableOpacity className="bg-black px-4 py-2 rounded-lg items-center mb-2" onPress={handleApplyPromo}>
+          <Text className="text-white font-semibold">Apply Promo</Text>
+        </TouchableOpacity>
+      </View>
+      <View className="mb-4">
+        <Text className="text-white text-base">Subtotal: ${subtotal.toFixed(2)}</Text>
+        {discount > 0 && <Text className="text-green-400 text-base">Discount: -${discount.toFixed(2)}</Text>}
         <Text className="text-white text-xl font-bold text-right">Total: ${total.toFixed(2)}</Text>
       </View>
+      <TouchableOpacity
+        className="bg-green-600 px-6 py-3 rounded-lg shadow-lg items-center mb-8"
+        onPress={handleCheckout}
+        disabled={cart.length === 0 || checkingOut}
+      >
+        <Text className="text-white text-lg font-semibold">{checkingOut ? 'Processing...' : 'Checkout'}</Text>
+      </TouchableOpacity>
     </View>
   );
 } 
