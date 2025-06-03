@@ -1,70 +1,114 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type CartItem = {
+export interface CartItem {
   id: string;
   name: string;
   price: number;
-  image: string;
-  qty: number;
-};
+  quantity: number;
+  image?: string;
+}
 
-export type CartContextType = {
+interface CartContextType {
   cart: CartItem[];
+  total: number;
   addToCart: (item: CartItem) => void;
-  updateQty: (id: string, qty: number) => void;
-  removeFromCart: (id: string) => void;
+  removeFromCart: (itemId: string) => void;
+  updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
-};
+}
 
-const CartContext = createContext<CartContextType | null>(null);
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_KEY = 'spicehaven_cart';
-
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [total, setTotal] = useState(0);
 
-  // Load cart from storage on mount
   useEffect(() => {
-    AsyncStorage.getItem(CART_KEY).then(data => {
-      if (data) setCart(JSON.parse(data));
-    });
+    loadCart();
   }, []);
 
-  // Save cart to storage whenever it changes
   useEffect(() => {
-    AsyncStorage.setItem(CART_KEY, JSON.stringify(cart));
+    calculateTotal();
+    saveCart();
   }, [cart]);
 
-  const addToCart = (item: CartItem) => {
-    setCart((prev) => {
-      const found = prev.find((i) => i.id === item.id);
-      if (found) {
-        return prev.map((i) => i.id === item.id ? { ...i, qty: i.qty + item.qty } : i);
+  const loadCart = async () => {
+    try {
+      const savedCart = await AsyncStorage.getItem('cart');
+      if (savedCart) {
+        setCart(JSON.parse(savedCart));
       }
-      return [...prev, { ...item }];
+    } catch (error) {
+      console.error('Error loading cart:', error);
+    }
+  };
+
+  const saveCart = async () => {
+    try {
+      await AsyncStorage.setItem('cart', JSON.stringify(cart));
+    } catch (error) {
+      console.error('Error saving cart:', error);
+    }
+  };
+
+  const calculateTotal = () => {
+    const newTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    setTotal(newTotal);
+  };
+
+  const addToCart = (item: CartItem) => {
+    setCart((currentCart) => {
+      const existingItem = currentCart.find((i) => i.id === item.id);
+      if (existingItem) {
+        return currentCart.map((i) =>
+          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+        );
+      }
+      return [...currentCart, { ...item, quantity: 1 }];
     });
   };
 
-  const updateQty = (id: string, qty: number) => {
-    setCart((prev) => prev.map((i) => i.id === id ? { ...i, qty: Math.max(1, qty) } : i));
+  const removeFromCart = (itemId: string) => {
+    setCart((currentCart) => currentCart.filter((item) => item.id !== itemId));
   };
 
-  const removeFromCart = (id: string) => {
-    setCart((prev) => prev.filter((i) => i.id !== id));
+  const updateQuantity = (itemId: string, quantity: number) => {
+    if (quantity < 1) {
+      removeFromCart(itemId);
+      return;
+    }
+    setCart((currentCart) =>
+      currentCart.map((item) =>
+        item.id === itemId ? { ...item, quantity } : item
+      )
+    );
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+  };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, updateQty, removeFromCart, clearCart }}>
+    <CartContext.Provider
+      value={{
+        cart,
+        total,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
 }
 
 export function useCart() {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart must be used within a CartProvider');
-  return ctx;
+  const context = useContext(CartContext);
+  if (context === undefined) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
 } 
