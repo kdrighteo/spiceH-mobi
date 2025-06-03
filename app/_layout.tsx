@@ -21,6 +21,8 @@ export default function RootLayout() {
               <Stack.Screen name="orders" options={{ headerShown: false }} />
               <Stack.Screen name="orders/[id]" options={{ headerShown: false }} />
               <Stack.Screen name="profile" options={{ headerShown: false }} />
+              <Stack.Screen name="addressBook" options={{ headerShown: false }} />
+              <Stack.Screen name="paymentMethods" options={{ headerShown: false }} />
             </Stack>
           </OrderProvider>
         </FavoritesProvider>

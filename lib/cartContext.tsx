@@ -29,6 +29,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const loadCart = async () => {
     try {
       const savedCart = await AsyncStorage.getItem('cart');
+      console.log('Loaded cart from AsyncStorage:', savedCart);
       if (savedCart) {
         setCart(JSON.parse(savedCart));
       }
@@ -51,6 +52,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addToCart = (item: CartItem) => {
+    console.log('Adding item to cart:', item);
     setCart((currentCart) => {
       const existingItem = currentCart.find((i) => i.id === item.id);
       if (existingItem) {

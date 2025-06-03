@@ -28,4 +28,18 @@ export async function getAverageRating(productId: string): Promise<{ avg: number
   if (reviews.length === 0) return { avg: 0, count: 0 };
   const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
   return { avg, count: reviews.length };
+}
+
+export async function getAllReviews(): Promise<Review[]> {
+  const data = await AsyncStorage.getItem(REVIEWS_KEY);
+  if (!data) return [];
+  return JSON.parse(data);
+}
+
+export async function deleteReview(productId: string, date: string) {
+  const data = await AsyncStorage.getItem(REVIEWS_KEY);
+  if (!data) return;
+  let all: Review[] = JSON.parse(data);
+  all = all.filter(r => !(r.productId === productId && r.date === date));
+  await AsyncStorage.setItem(REVIEWS_KEY, JSON.stringify(all));
 } 

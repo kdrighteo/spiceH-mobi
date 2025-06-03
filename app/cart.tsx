@@ -34,11 +34,9 @@ export default function CartScreen() {
     setCheckingOut(true);
     // In a real app, you would process the order here
     setTimeout(() => {
-      clearCart();
       setPromo('');
       setDiscount(0);
       setCheckingOut(false);
-      Alert.alert('Order Placed', 'Your order has been placed!');
       router.push('/checkout');
     }, 1000);
   };
@@ -53,11 +51,12 @@ export default function CartScreen() {
   );
 
   const renderEmptyState = () => (
-    <View className="items-center justify-center mt-16 mb-16">
-      <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2038/2038854.png' }} className="w-32 h-32 mb-4 opacity-80" />
-      <Text className="text-gray-500 text-lg mb-2">Your cart is empty.</Text>
-      <TouchableOpacity className="bg-red-600 px-6 py-2 rounded-full shadow-lg" onPress={() => router.push('/products')}>
-        <Text className="text-white font-semibold">Shop Now</Text>
+    <View className="items-center justify-center mt-20 mb-20 px-6">
+      <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2038/2038854.png' }} className="w-36 h-36 mb-6 opacity-90" />
+      <Text className="text-2xl font-bold text-gray-700 mb-2 text-center">Your cart is feeling lonely!</Text>
+      <Text className="text-gray-500 text-base mb-4 text-center">Looks like you haven't added anything yet. Start shopping and fill your cart with flavor!</Text>
+      <TouchableOpacity className="bg-red-600 px-8 py-3 rounded-full shadow-lg" onPress={() => router.push('/products')}>
+        <Text className="text-white text-lg font-semibold">Shop Now</Text>
       </TouchableOpacity>
     </View>
   );

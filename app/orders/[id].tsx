@@ -13,6 +13,8 @@ export default function OrderDetailsScreen() {
   const router = useRouter();
   const { orders, cancelOrder } = useOrders();
   const order = orders.find(o => o.id === id);
+  console.log('Retrieved order:', order);
+  console.log('Order total:', order?.total);
 
   if (!order) {
     return (

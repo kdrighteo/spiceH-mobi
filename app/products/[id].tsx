@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View, Text, Image, TouchableOpacity, TextInput, FlatList } from 'react-native';
+import { View, Text, Image, TouchableOpacity, TextInput, FlatList, Modal, Dimensions, ScrollView } from 'react-native';
 import { products } from '../../lib/products';
 import { useState, useEffect } from 'react';
 import { useCart } from '../../lib/cartContext';
@@ -32,13 +32,18 @@ export default function ProductDetails() {
   const [submitting, setSubmitting] = useState(false);
   const [avgRating, setAvgRating] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [zoomVisible, setZoomVisible] = useState(false);
 
   useEffect(() => {
     if (product) {
-      const productReviews = getReviews(product.id);
-      setReviews(productReviews);
-      setAvgRating(getAverageRating(productReviews));
-      setReviewCount(productReviews.length);
+      (async () => {
+        const productReviews = await getReviews(product.id);
+        setReviews(productReviews);
+        const avgData = await getAverageRating(product.id);
+        setAvgRating(avgData.avg);
+        setReviewCount(avgData.count);
+      })();
     }
   }, [product]);
 
@@ -59,14 +64,65 @@ export default function ProductDetails() {
     if (!reviewText.trim()) return;
     setSubmitting(true);
     await addReview(product.id, reviewRating, reviewText);
-    const updatedReviews = getReviews(product.id);
+    const updatedReviews = await getReviews(product.id);
     setReviews(updatedReviews);
-    setAvgRating(getAverageRating(updatedReviews));
-    setReviewCount(updatedReviews.length);
+    const avgData = await getAverageRating(product.id);
+    setAvgRating(avgData.avg);
+    setReviewCount(avgData.count);
     setReviewText('');
     setReviewRating(5);
     setSubmitting(false);
   };
+
+  // Support multiple images if available, fallback to single image
+  const images: string[] = (Array.isArray((product as any).images) && (product as any).images.length > 0)
+    ? (product as any).images
+    : [product.image];
+  const screenWidth = Dimensions.get('window').width;
+
+  const renderImageCarousel = () => (
+    <View className="items-center mb-4">
+      <FlatList
+        data={images}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={e => {
+          const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+          setCarouselIndex(index);
+        }}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => setZoomVisible(true)} activeOpacity={0.9}>
+            <Image source={{ uri: item }} className="w-full h-56 rounded-2xl shadow-lg mb-2" resizeMode="cover" style={{ width: screenWidth - 32 }} />
+          </TouchableOpacity>
+        )}
+        keyExtractor={(_: string, i: number) => i.toString()}
+        style={{ width: screenWidth }}
+      />
+      {/* Pagination dots */}
+      <View className="flex-row justify-center mt-2">
+        {images.map((_: string, i: number) => (
+          <View key={i} className={`w-3 h-3 rounded-full mx-1 ${carouselIndex === i ? 'bg-red-600' : 'bg-gray-300'}`} />
+        ))}
+      </View>
+      {/* Zoom Modal */}
+      <Modal visible={zoomVisible} transparent animationType="fade" onRequestClose={() => setZoomVisible(false)}>
+        <View className="flex-1 bg-black/90 justify-center items-center">
+          <ScrollView
+            minimumZoomScale={1}
+            maximumZoomScale={3}
+            contentContainerStyle={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+            centerContent
+          >
+            <Image source={{ uri: images[carouselIndex] }} style={{ width: screenWidth, height: 400, resizeMode: 'contain' }} />
+          </ScrollView>
+          <TouchableOpacity className="absolute top-12 right-6 bg-white/80 rounded-full p-2" onPress={() => setZoomVisible(false)}>
+            <Text className="text-red-700 text-2xl">×</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    </View>
+  );
 
   const renderReviews = () => (
     <View>
@@ -78,19 +134,29 @@ export default function ProductDetails() {
       <FlatList
         data={reviews}
         keyExtractor={(_, i) => i.toString()}
-        ListEmptyComponent={<Text className="text-gray-500 mb-2">No reviews yet. Be the first to review!</Text>}
+        ListEmptyComponent={
+          <View className="items-center justify-center py-8 px-4">
+            <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2278/2278992.png' }} className="w-24 h-24 mb-4 opacity-80" />
+            <Text className="text-lg font-bold text-gray-700 mb-2 text-center">No reviews yet!</Text>
+            <Text className="text-gray-500 text-base mb-2 text-center">Be the first to review this product and help others decide.</Text>
+          </View>
+        }
         renderItem={({ item }) => (
-          <ReviewItem
-            review={{
-              id: item.productId + item.date,
-              reviewer: 'Anonymous',
-              rating: item.rating,
-              text: item.text,
-              date: item.date,
-            }}
-          />
+          <View className="bg-white/90 rounded-xl p-4 mb-3 flex-row items-start shadow">
+            <View className="w-10 h-10 rounded-full bg-red-100 items-center justify-center mr-3 mt-1">
+              <Text className="text-red-700 font-bold text-lg">A</Text>
+            </View>
+            <View className="flex-1">
+              <View className="flex-row items-center mb-1">
+                <Text className="font-semibold text-gray-800 mr-2">Anonymous</Text>
+                <Text className="text-yellow-500 text-base">{'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}</Text>
+              </View>
+              <Text className="text-gray-600 mb-1 text-xs">{new Date(item.date).toLocaleDateString()}</Text>
+              <Text className="text-gray-800 text-base">{item.text}</Text>
+            </View>
+          </View>
         )}
-        style={{ maxHeight: 160 }}
+        style={{ maxHeight: 180 }}
       />
       <View className="mt-4">
         <Text className="font-semibold mb-1">Leave a review:</Text>
@@ -112,7 +178,7 @@ export default function ProductDetails() {
           accessibilityLabel="Write your review"
         />
         <TouchableOpacity
-          className="bg-red-600 px-4 py-2 rounded-lg items-center"
+          className="bg-red-600 px-4 py-2 rounded-full items-center"
           onPress={handleSubmitReview}
           disabled={submitting || !reviewText.trim()}
         >
@@ -130,10 +196,8 @@ export default function ProductDetails() {
           <Text className="text-red-700 text-lg">← Back</Text>
         </TouchableOpacity>
       </View>
-      {/* Product Image */}
-      <View className="items-center mb-4">
-        <Image source={{ uri: product.image }} className="w-full h-56 rounded-2xl shadow-lg mb-2" resizeMode="cover" />
-      </View>
+      {/* Product Image Carousel */}
+      {renderImageCarousel()}
       {/* Product Info */}
       <View className="mb-4">
         <View className="flex-row items-center justify-between mb-2">

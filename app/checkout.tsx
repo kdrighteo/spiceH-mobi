@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, TextInput, Alert, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCart } from '../lib/cartContext';
 import { useOrders } from '../lib/orderContext';
@@ -69,6 +69,9 @@ export default function Checkout() {
   // Calculate subtotal and total from cart items
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const total = subtotal; // Add discount logic here if needed
+  console.log('Total amount:', total);
+  console.log('Cart items:', cart);
+  console.log('Cart total:', cart.reduce((sum, item) => sum + item.price * item.quantity, 0));
 
   const handleAddAddress = () => {
     if (!newAddress.name || !newAddress.street || !newAddress.city || !newAddress.state || !newAddress.zipCode || !newAddress.country) {
@@ -122,12 +125,37 @@ export default function Checkout() {
 
   const renderHeader = () => (
     <View className="pt-12 px-4">
-      <View className="flex-row items-center mb-6 justify-center">
+      <View className="flex-row items-center mb-2 justify-center">
         <Text className="text-3xl font-extrabold text-red-700 tracking-widest mr-2">🧾</Text>
         <Text className="text-3xl font-extrabold text-red-700 tracking-widest">Checkout</Text>
       </View>
+      <View className="flex-row justify-center mb-4">
+        <Text className="text-gray-600 font-semibold bg-white/80 rounded-full px-4 py-1">Step 2 of 2: Review & Pay</Text>
+      </View>
     </View>
   );
+
+  const AnimatedCard = ({ children }: { children: React.ReactNode }) => {
+    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+    const scaleAnim = React.useRef(new Animated.Value(0.97)).current;
+    React.useEffect(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, []);
+    return (
+      <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>{children}</Animated.View>
+    );
+  };
 
   const renderAddresses = () => (
     <View className="px-4 mb-6">
@@ -137,18 +165,21 @@ export default function Checkout() {
         horizontal
         showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => setSelectedAddress(item.id)}
-            className={`mr-4 p-4 rounded-2xl border-2 ${
-              selectedAddress === item.id ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white'
-            }`}
-            style={{ width: 280 }}
-          >
-            <Text className="font-semibold text-gray-800 mb-2">{item.name}</Text>
-            <Text className="text-gray-600">{item.street}</Text>
-            <Text className="text-gray-600">{`${item.city}, ${item.state} ${item.zipCode}`}</Text>
-            <Text className="text-gray-600">{item.country}</Text>
-          </TouchableOpacity>
+          <AnimatedCard>
+            <TouchableOpacity
+              onPress={() => setSelectedAddress(item.id)}
+              className={`mr-4 p-4 rounded-2xl border-2 ${
+                selectedAddress === item.id ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white'
+              }`}
+              style={{ width: 280 }}
+            >
+              <Text className="text-2xl mb-2">{item.name === 'Home' ? '🏠' : '🏢'}</Text>
+              <Text className="font-semibold text-gray-800 mb-2">{item.name}</Text>
+              <Text className="text-gray-600">{item.street}</Text>
+              <Text className="text-gray-600">{`${item.city}, ${item.state} ${item.zipCode}`}</Text>
+              <Text className="text-gray-600">{item.country}</Text>
+            </TouchableOpacity>
+          </AnimatedCard>
         )}
       />
       <TouchableOpacity
@@ -168,18 +199,23 @@ export default function Checkout() {
         horizontal
         showsHorizontalScrollIndicator={false}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => setSelectedPaymentMethod(item)}
-            className={`mr-4 p-4 rounded-2xl border-2 ${
-              selectedPaymentMethod.id === item.id ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white'
-            }`}
-            style={{ width: 280 }}
-          >
-            <Text className="font-semibold text-gray-800 mb-2">
-              {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-            </Text>
-            <Text className="text-gray-600">•••• {item.last4}</Text>
-          </TouchableOpacity>
+          <AnimatedCard>
+            <TouchableOpacity
+              onPress={() => setSelectedPaymentMethod(item)}
+              className={`mr-4 p-4 rounded-2xl border-2 ${
+                selectedPaymentMethod.id === item.id ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white'
+              }`}
+              style={{ width: 280 }}
+            >
+              <Text className="text-2xl mb-2">
+                {item.type === 'credit' ? '💳' : item.type === 'debit' ? '🏦' : '🅿️'}
+              </Text>
+              <Text className="font-semibold text-gray-800 mb-2">
+                {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+              </Text>
+              <Text className="text-gray-600">•••• {item.last4}</Text>
+            </TouchableOpacity>
+          </AnimatedCard>
         )}
       />
     </View>
@@ -188,30 +224,33 @@ export default function Checkout() {
   const renderOrderSummary = () => (
     <View className="px-4 mb-6">
       <Text className="text-xl font-bold mb-4 text-red-700">Order Summary</Text>
-      <View className="bg-white rounded-2xl p-6 shadow">
-        {cart.map((item) => (
-          <View key={item.id} className="flex-row justify-between mb-2">
-            <Text className="text-gray-800">{item.name} x {item.quantity}</Text>
-            <Text className="text-gray-800">${(item.price * item.quantity).toFixed(2)}</Text>
-          </View>
-        ))}
-        <View className="border-t border-gray-200 mt-4 pt-4">
-          <View className="flex-row justify-between">
-            <Text className="font-semibold">Total</Text>
-            <Text className="font-semibold">${total.toFixed(2)}</Text>
+      <AnimatedCard>
+        <View className="bg-white rounded-2xl p-6 shadow">
+          {cart.map((item) => (
+            <View key={item.id} className="flex-row justify-between mb-2">
+              <Text className="text-gray-800">{item.name} x {item.quantity}</Text>
+              <Text className="text-gray-800">${(item.price * item.quantity).toFixed(2)}</Text>
+            </View>
+          ))}
+          <View className="border-t border-gray-200 mt-4 pt-4">
+            <View className="flex-row justify-between">
+              <Text className="font-semibold">Total</Text>
+              <Text className="font-semibold">${total.toFixed(2)}</Text>
+            </View>
           </View>
         </View>
-      </View>
+      </AnimatedCard>
     </View>
   );
 
   const renderFooter = () => (
     <View className="px-4 pb-12">
       <TouchableOpacity
-        className="bg-red-600 px-8 py-3 rounded-full shadow-lg items-center"
+        className="bg-gradient-to-r from-red-500 to-yellow-400 px-10 py-4 rounded-full shadow-xl items-center border-2 border-red-700"
         onPress={handlePlaceOrder}
+        activeOpacity={0.85}
       >
-        <Text className="text-white text-lg font-semibold">Place Order - ${total.toFixed(2)}</Text>
+        <Text className="text-white text-xl font-extrabold tracking-wide drop-shadow-lg">🎉 Place Order - ${total.toFixed(2)}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -224,9 +263,9 @@ export default function Checkout() {
         ListHeaderComponent={
           <>
             {renderHeader()}
+            {renderOrderSummary()}
             {renderAddresses()}
             {renderPaymentMethods()}
-            {renderOrderSummary()}
           </>
         }
         ListFooterComponent={renderFooter}

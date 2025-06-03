@@ -46,9 +46,27 @@ export default function ProfileScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           className="p-4 border-b border-gray-200"
+          onPress={() => router.push('/addressBook')}
+        >
+          <Text className="text-gray-800 font-semibold">Address Book</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="p-4 border-b border-gray-200"
+          onPress={() => router.push('/paymentMethods')}
+        >
+          <Text className="text-gray-800 font-semibold">Payment Methods</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="p-4 border-b border-gray-200"
           onPress={() => router.push('/settings')}
         >
           <Text className="text-gray-800 font-semibold">Settings</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="p-4 border-b border-gray-200"
+          onPress={() => router.push('/myReviews')}
+        >
+          <Text className="text-gray-800 font-semibold">My Reviews</Text>
         </TouchableOpacity>
         <TouchableOpacity
           className="p-4"

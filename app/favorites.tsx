@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '../lib/favoritesContext';
 import { products } from '../lib/products';
@@ -24,10 +24,12 @@ export default function FavoritesScreen() {
   );
 
   const renderEmptyState = () => (
-    <View className="items-center justify-center mt-16 mb-16">
-      <Text className="text-gray-500 text-lg mb-2">No favorites yet.</Text>
-      <TouchableOpacity className="bg-red-600 px-6 py-2 rounded-full shadow-lg" onPress={() => router.push('/products')}>
-        <Text className="text-white font-semibold">Browse Products</Text>
+    <View className="items-center justify-center mt-20 mb-20 px-6">
+      <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/833/833472.png' }} className="w-36 h-36 mb-6 opacity-90" />
+      <Text className="text-2xl font-bold text-gray-700 mb-2 text-center">No favorites yet!</Text>
+      <Text className="text-gray-500 text-base mb-4 text-center">You haven't added any favorites. Browse our products and tap the heart to save your favorites!</Text>
+      <TouchableOpacity className="bg-red-600 px-8 py-3 rounded-full shadow-lg" onPress={() => router.push('/products')}>
+        <Text className="text-white text-lg font-semibold">Browse Products</Text>
       </TouchableOpacity>
     </View>
   );

@@ -50,9 +50,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       trackingNumber: undefined,
       estimatedDelivery: undefined,
     };
+    console.log('Saving new order:', newOrder);
+    console.log('Total amount saved:', newOrder.total);
     const updatedOrders = [...orders, newOrder];
     setOrders(updatedOrders);
     await saveOrders();
+    await loadOrders();
     return newOrder;
   };
 
