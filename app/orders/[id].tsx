@@ -1,156 +1,190 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useOrders } from '../../lib/orderContext';
+import CartButton from '../components/CartButton';
+import FavoritesButton from '../components/FavoritesButton';
+import OrdersButton from '../components/OrdersButton';
+import ProfileButton from '../components/ProfileButton';
+import { Order } from '../../lib/types';
 
-// Mock order data - in a real app, this would come from an API or database
-const mockOrder = {
-  id: '1',
-  date: '2024-03-15',
-  status: 'shipped',
-  items: [
-    { id: '1', name: 'Black Pepper', quantity: 2, price: 5.99 },
-    { id: '2', name: 'Cinnamon', quantity: 1, price: 4.99 },
-  ],
-  total: 16.97,
-  trackingNumber: 'TRK123456789',
-  shippingAddress: {
-    name: 'Home',
-    street: '123 Main St',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10001',
-    country: 'USA',
-  },
-  paymentMethod: {
-    type: 'credit_card',
-    last4: '4242',
-  },
-  estimatedDelivery: '2024-03-20',
-  shippingMethod: 'Standard Shipping',
-};
-
-export default function OrderDetails() {
+export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [isCancelling, setIsCancelling] = useState(false);
+  const { orders, cancelOrder } = useOrders();
+  const order = orders.find(o => o.id === id);
 
-  const handleCancelOrder = () => {
-    Alert.alert(
-      'Cancel Order',
-      'Are you sure you want to cancel this order?',
-      [
-        {
-          text: 'No',
-          style: 'cancel',
-        },
-        {
-          text: 'Yes',
-          onPress: () => {
-            setIsCancelling(true);
-            // In a real app, this would make an API call to cancel the order
-            setTimeout(() => {
-              setIsCancelling(false);
-              Alert.alert('Success', 'Order has been cancelled');
-              router.back();
-            }, 1000);
-          },
-        },
-      ]
+  if (!order) {
+    return (
+      <View className="flex-1 bg-gradient-to-b from-yellow-50 to-red-100 items-center justify-center">
+        <Text className="text-gray-500 text-lg">Order not found</Text>
+      </View>
     );
-  };
+  }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  const renderHeader = () => (
+    <View className="pt-12 px-4">
+      <View className="flex-row items-center mb-6 justify-center">
+        <Text className="text-3xl font-extrabold text-red-700 tracking-widest mr-2">📦</Text>
+        <Text className="text-3xl font-extrabold text-red-700 tracking-widest">Order Details</Text>
+      </View>
+    </View>
+  );
 
-  return (
-    <ScrollView className="flex-1 bg-gray-100">
-      <View className="p-4">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="mb-4"
-        >
-          <Text className="text-blue-500">← Back to Orders</Text>
-        </TouchableOpacity>
-
-        <Text className="text-2xl font-bold mb-6">Order #{id}</Text>
-
-        {/* Order Status */}
-        <View className="bg-white rounded-lg p-4 mb-4">
-          <Text className="text-lg font-semibold mb-2">Order Status</Text>
-          <View className="flex-row items-center">
-            <View className="bg-blue-500 px-3 py-1 rounded-full mr-2">
-              <Text className="text-white capitalize">{mockOrder.status}</Text>
-            </View>
-            <Text className="text-gray-600">
-              Placed on {formatDate(mockOrder.date)}
-            </Text>
+  const renderOrderInfo = () => (
+    <View className="px-4 mb-6">
+      <View className="bg-white/90 rounded-2xl p-6 shadow">
+        <View className="flex-row justify-between items-center mb-4">
+          <Text className="font-semibold text-gray-800">Order #{order.id}</Text>
+          <Text className={`font-semibold ${
+            order.status === 'delivered' ? 'text-green-600' :
+            order.status === 'cancelled' ? 'text-red-600' :
+            'text-yellow-600'
+          }`}>
+            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+          </Text>
+        </View>
+        <Text className="text-gray-600 mb-4">{new Date(order.date).toLocaleDateString()}</Text>
+        {order.trackingNumber && (
+          <View className="mb-4">
+            <Text className="text-gray-600 mb-1">Tracking Number</Text>
+            <Text className="font-semibold text-gray-800">{order.trackingNumber}</Text>
           </View>
-        </View>
-
-        {/* Items */}
-        <View className="bg-white rounded-lg p-4 mb-4">
-          <Text className="text-lg font-semibold mb-2">Items</Text>
-          {mockOrder.items.map((item) => (
-            <View key={item.id} className="flex-row justify-between py-2 border-b border-gray-100">
-              <View>
-                <Text className="font-medium">{item.name}</Text>
-                <Text className="text-gray-500">Qty: {item.quantity}</Text>
-              </View>
-              <Text className="font-medium">${(item.price * item.quantity).toFixed(2)}</Text>
-            </View>
-          ))}
-          <View className="flex-row justify-between mt-2 pt-2 border-t border-gray-200">
-            <Text className="font-semibold">Total</Text>
-            <Text className="font-semibold">${mockOrder.total.toFixed(2)}</Text>
+        )}
+        {order.estimatedDelivery && (
+          <View className="mb-4">
+            <Text className="text-gray-600 mb-1">Estimated Delivery</Text>
+            <Text className="font-semibold text-gray-800">{new Date(order.estimatedDelivery).toLocaleDateString()}</Text>
           </View>
-        </View>
-
-        {/* Shipping Information */}
-        <View className="bg-white rounded-lg p-4 mb-4">
-          <Text className="text-lg font-semibold mb-2">Shipping Information</Text>
-          <Text className="text-gray-600 mb-1">{mockOrder.shippingAddress.name}</Text>
-          <Text className="text-gray-600 mb-1">{mockOrder.shippingAddress.street}</Text>
-          <Text className="text-gray-600 mb-1">
-            {mockOrder.shippingAddress.city}, {mockOrder.shippingAddress.state} {mockOrder.shippingAddress.zipCode}
-          </Text>
-          <Text className="text-gray-600 mb-2">{mockOrder.shippingAddress.country}</Text>
-          <Text className="text-gray-600">Method: {mockOrder.shippingMethod}</Text>
-          {mockOrder.trackingNumber && (
-            <Text className="text-gray-600 mt-2">
-              Tracking Number: {mockOrder.trackingNumber}
-            </Text>
-          )}
-          <Text className="text-gray-600 mt-2">
-            Estimated Delivery: {formatDate(mockOrder.estimatedDelivery)}
-          </Text>
-        </View>
-
-        {/* Payment Information */}
-        <View className="bg-white rounded-lg p-4 mb-4">
-          <Text className="text-lg font-semibold mb-2">Payment Information</Text>
-          <Text className="text-gray-600">
-            {mockOrder.paymentMethod.type === 'credit_card' ? 'Credit Card' : 'Other'} ending in {mockOrder.paymentMethod.last4}
-          </Text>
-        </View>
-
-        {/* Cancel Order Button */}
-        {mockOrder.status !== 'delivered' && mockOrder.status !== 'cancelled' && (
-          <TouchableOpacity
-            onPress={handleCancelOrder}
-            disabled={isCancelling}
-            className={`bg-red-500 rounded-lg p-4 mb-4 ${isCancelling ? 'opacity-50' : ''}`}
-          >
-            <Text className="text-white text-center font-semibold">
-              {isCancelling ? 'Cancelling...' : 'Cancel Order'}
-            </Text>
-          </TouchableOpacity>
         )}
       </View>
-    </ScrollView>
+    </View>
+  );
+
+  const renderAddress = () => (
+    <View className="px-4 mb-6">
+      <Text className="text-xl font-bold mb-4 text-red-700">Shipping Address</Text>
+      <View className="bg-white/90 rounded-2xl p-6 shadow">
+        {order.address ? (
+          <>
+            <Text className="font-semibold text-gray-800 mb-2">{order.address.name}</Text>
+            <Text className="text-gray-600">{order.address.street}</Text>
+            <Text className="text-gray-600">{`${order.address.city}, ${order.address.state} ${order.address.zip}`}</Text>
+            <Text className="text-gray-600">{order.address.country}</Text>
+          </>
+        ) : (
+          <Text className="text-gray-500">No address information available.</Text>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderPayment = () => (
+    <View className="px-4 mb-6">
+      <Text className="text-xl font-bold mb-4 text-red-700">Payment Method</Text>
+      <View className="bg-white/90 rounded-2xl p-6 shadow">
+        {order.paymentMethod && order.paymentMethod.type ? (
+          <>
+            <Text className="font-semibold text-gray-800 mb-2">
+              {order.paymentMethod.type.charAt(0).toUpperCase() + order.paymentMethod.type.slice(1)} Card
+            </Text>
+            <Text className="text-gray-600">•••• {order.paymentMethod.last4}</Text>
+          </>
+        ) : (
+          <Text className="text-gray-500">No payment information available.</Text>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderItems = () => (
+    <View className="px-4 mb-6">
+      <Text className="text-xl font-bold mb-4 text-red-700">Order Items</Text>
+      <FlatList
+        data={order.items}
+        renderItem={({ item }) => (
+          <View className="bg-white/90 rounded-2xl p-4 mb-4 shadow">
+            <View className="flex-row items-center">
+              <View className="flex-1">
+                <Text className="font-semibold text-gray-800 mb-1">{item.name}</Text>
+                <Text className="text-gray-600 mb-2">${item.price.toFixed(2)}</Text>
+                <Text className="text-gray-600">Quantity: {item.quantity}</Text>
+              </View>
+              <Text className="font-semibold text-gray-800">${(item.price * item.quantity).toFixed(2)}</Text>
+            </View>
+          </View>
+        )}
+        scrollEnabled={false}
+      />
+    </View>
+  );
+
+  const renderTotal = () => (
+    <View className="px-4 mb-6">
+      <View className="bg-white/90 rounded-2xl p-6 shadow">
+        <View className="flex-row justify-between mb-2">
+          <Text className="text-gray-600">Subtotal</Text>
+          <Text className="text-gray-800">${order.total.toFixed(2)}</Text>
+        </View>
+        <View className="flex-row justify-between mb-2">
+          <Text className="text-gray-600">Shipping</Text>
+          <Text className="text-gray-800">$5.99</Text>
+        </View>
+        <View className="border-t border-gray-200 pt-2 mt-2">
+          <View className="flex-row justify-between">
+            <Text className="font-semibold text-gray-800">Total</Text>
+            <Text className="font-semibold text-gray-800">${(order.total + 5.99).toFixed(2)}</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderActions = () => (
+    <View className="px-4 pb-12">
+      {order.status === 'processing' && (
+        <TouchableOpacity
+          className="bg-red-600 px-8 py-3 rounded-full shadow-lg items-center mb-4"
+          onPress={() => {
+            cancelOrder(order.id);
+            router.back();
+          }}
+        >
+          <Text className="text-white text-lg font-semibold">Cancel Order</Text>
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity
+        className="bg-red-600 px-8 py-3 rounded-full shadow-lg items-center"
+        onPress={() => router.push('/products')}
+      >
+        <Text className="text-white text-lg font-semibold">Shop Again</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <View className="flex-1 bg-gradient-to-b from-yellow-50 to-red-100">
+      <FlatList
+        data={[]}
+        renderItem={() => null}
+        ListHeaderComponent={
+          <>
+            {renderHeader()}
+            {renderOrderInfo()}
+            {renderAddress()}
+            {renderPayment()}
+            {renderItems()}
+            {renderTotal()}
+          </>
+        }
+        ListFooterComponent={renderActions}
+        showsVerticalScrollIndicator={false}
+      />
+      {/* Floating Action Buttons */}
+      <ProfileButton />
+      <OrdersButton />
+      <FavoritesButton />
+      <CartButton />
+    </View>
   );
 } 

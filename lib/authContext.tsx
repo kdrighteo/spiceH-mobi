@@ -4,12 +4,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export type User = {
   email: string;
   password: string;
+  name: string;
 };
 
 export type AuthContextType = {
   currentUser: User | null;
   loading: boolean;
-  signup: (email: string, password: string) => Promise<boolean>;
+  signup: (email: string, password: string, name: string) => Promise<boolean>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
 };
@@ -38,14 +39,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const signup = async (email: string, password: string) => {
+  const signup = async (email: string, password: string, name: string) => {
     const data = await AsyncStorage.getItem(USERS_KEY);
     const users: User[] = data ? JSON.parse(data) : [];
     if (users.find(u => u.email === email)) return false;
-    users.push({ email, password });
+    users.push({ email, password, name });
     await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
     await AsyncStorage.setItem(SESSION_KEY, email);
-    setCurrentUser({ email, password });
+    setCurrentUser({ email, password, name });
     return true;
   };
 

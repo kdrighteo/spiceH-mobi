@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCart } from '../lib/cartContext';
-
-type PaymentMethod = 'credit' | 'debit' | 'paypal' | 'apple';
+import { useOrders } from '../lib/orderContext';
+import AddressForm from './components/AddressForm';
+import CartButton from './components/CartButton';
+import FavoritesButton from './components/FavoritesButton';
+import OrdersButton from './components/OrdersButton';
+import ProfileButton from './components/ProfileButton';
+import { PaymentMethod } from '../lib/types';
 
 interface Address {
   id: string;
@@ -18,8 +23,14 @@ interface Address {
 
 export default function Checkout() {
   const router = useRouter();
-  const { cart, total, clearCart } = useCart();
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('credit');
+  const { cart, clearCart } = useCart();
+  const { addOrder } = useOrders();
+  const PAYMENT_METHODS: PaymentMethod[] = [
+    { id: '1', type: 'credit', last4: '4242', isDefault: true },
+    { id: '2', type: 'debit', last4: '1234', isDefault: false },
+    { id: '3', type: 'paypal', last4: '0000', isDefault: false },
+  ];
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(PAYMENT_METHODS[0]);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [newAddress, setNewAddress] = useState<Partial<Address>>({
@@ -55,12 +66,15 @@ export default function Checkout() {
     },
   ]);
 
+  // Calculate subtotal and total from cart items
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = subtotal; // Add discount logic here if needed
+
   const handleAddAddress = () => {
     if (!newAddress.name || !newAddress.street || !newAddress.city || !newAddress.state || !newAddress.zipCode || !newAddress.country) {
       Alert.alert('Error', 'Please fill in all address fields');
       return;
     }
-
     const address: Address = {
       id: Date.now().toString(),
       name: newAddress.name!,
@@ -71,194 +85,158 @@ export default function Checkout() {
       country: newAddress.country!,
       isDefault: savedAddresses.length === 0,
     };
-
     setSavedAddresses([...savedAddresses, address]);
     setShowNewAddressForm(false);
-    setNewAddress({
-      name: '',
-      street: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: '',
-    });
+    setNewAddress({ name: '', street: '', city: '', state: '', zipCode: '', country: '' });
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       Alert.alert('Error', 'Please select a shipping address');
       return;
     }
-
-    // In a real app, you would process the payment and create an order here
-    Alert.alert(
-      'Order Placed',
-      'Your order has been placed successfully!',
-      [
-        {
-          text: 'View Order',
-          onPress: () => {
-            clearCart();
-            router.push('/orders');
-          },
-        },
-      ]
-    );
+    const address = savedAddresses.find(a => a.id === selectedAddress);
+    if (!address) {
+      Alert.alert('Error', 'Selected address not found');
+      return;
+    }
+    // Save the order with correct field names and types
+    const newOrder = await addOrder({
+      items: cart,
+      total,
+      address: {
+        id: address.id,
+        name: address.name,
+        street: address.street,
+        city: address.city,
+        state: address.state,
+        zip: address.zipCode, // ensure 'zip' field
+        country: address.country,
+        isDefault: address.isDefault,
+      },
+      paymentMethod: selectedPaymentMethod,
+    });
+    clearCart();
+    router.push(`/orders/${newOrder.id}`);
   };
 
-  return (
-    <ScrollView className="flex-1 bg-gray-100">
-      <View className="p-4">
-        <Text className="text-2xl font-bold mb-6">Checkout</Text>
-
-        {/* Order Summary */}
-        <View className="bg-white rounded-lg p-4 mb-6">
-          <Text className="text-xl font-semibold mb-4">Order Summary</Text>
-          {cart.map((item) => (
-            <View key={item.id} className="flex-row justify-between mb-2">
-              <Text>{item.name} x {item.quantity}</Text>
-              <Text>${(item.price * item.quantity).toFixed(2)}</Text>
-            </View>
-          ))}
-          <View className="border-t border-gray-200 mt-4 pt-4">
-            <View className="flex-row justify-between">
-              <Text className="font-semibold">Total</Text>
-              <Text className="font-semibold">${total.toFixed(2)}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Shipping Address */}
-        <View className="bg-white rounded-lg p-4 mb-6">
-          <Text className="text-xl font-semibold mb-4">Shipping Address</Text>
-          {savedAddresses.map((address) => (
-            <TouchableOpacity
-              key={address.id}
-              className={`p-4 border rounded-lg mb-2 ${
-                selectedAddress === address.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-              }`}
-              onPress={() => setSelectedAddress(address.id)}
-            >
-              <Text className="font-semibold">{address.name}</Text>
-              <Text>{address.street}</Text>
-              <Text>{`${address.city}, ${address.state} ${address.zipCode}`}</Text>
-              <Text>{address.country}</Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            className="bg-blue-500 px-4 py-2 rounded-lg mt-2"
-            onPress={() => setShowNewAddressForm(true)}
-          >
-            <Text className="text-white text-center">Add New Address</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* New Address Form */}
-        {showNewAddressForm && (
-          <View className="bg-white rounded-lg p-4 mb-6">
-            <Text className="text-xl font-semibold mb-4">Add New Address</Text>
-            <TextInput
-              className="border border-gray-200 rounded-lg p-2 mb-2"
-              placeholder="Address Name (e.g., Home, Office)"
-              value={newAddress.name}
-              onChangeText={(text) => setNewAddress({ ...newAddress, name: text })}
-            />
-            <TextInput
-              className="border border-gray-200 rounded-lg p-2 mb-2"
-              placeholder="Street Address"
-              value={newAddress.street}
-              onChangeText={(text) => setNewAddress({ ...newAddress, street: text })}
-            />
-            <TextInput
-              className="border border-gray-200 rounded-lg p-2 mb-2"
-              placeholder="City"
-              value={newAddress.city}
-              onChangeText={(text) => setNewAddress({ ...newAddress, city: text })}
-            />
-            <TextInput
-              className="border border-gray-200 rounded-lg p-2 mb-2"
-              placeholder="State"
-              value={newAddress.state}
-              onChangeText={(text) => setNewAddress({ ...newAddress, state: text })}
-            />
-            <TextInput
-              className="border border-gray-200 rounded-lg p-2 mb-2"
-              placeholder="ZIP Code"
-              value={newAddress.zipCode}
-              onChangeText={(text) => setNewAddress({ ...newAddress, zipCode: text })}
-            />
-            <TextInput
-              className="border border-gray-200 rounded-lg p-2 mb-4"
-              placeholder="Country"
-              value={newAddress.country}
-              onChangeText={(text) => setNewAddress({ ...newAddress, country: text })}
-            />
-            <View className="flex-row justify-between">
-              <TouchableOpacity
-                className="bg-gray-500 px-4 py-2 rounded-lg"
-                onPress={() => setShowNewAddressForm(false)}
-              >
-                <Text className="text-white text-center">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="bg-blue-500 px-4 py-2 rounded-lg"
-                onPress={handleAddAddress}
-              >
-                <Text className="text-white text-center">Save Address</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Payment Methods */}
-        <View className="bg-white rounded-lg p-4 mb-6">
-          <Text className="text-xl font-semibold mb-4">Payment Method</Text>
-          <View className="space-y-2">
-            <TouchableOpacity
-              className={`p-4 border rounded-lg ${
-                selectedPaymentMethod === 'credit' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-              }`}
-              onPress={() => setSelectedPaymentMethod('credit')}
-            >
-              <Text className="font-semibold">Credit Card</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className={`p-4 border rounded-lg ${
-                selectedPaymentMethod === 'debit' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-              }`}
-              onPress={() => setSelectedPaymentMethod('debit')}
-            >
-              <Text className="font-semibold">Debit Card</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className={`p-4 border rounded-lg ${
-                selectedPaymentMethod === 'paypal' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-              }`}
-              onPress={() => setSelectedPaymentMethod('paypal')}
-            >
-              <Text className="font-semibold">PayPal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className={`p-4 border rounded-lg ${
-                selectedPaymentMethod === 'apple' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-              }`}
-              onPress={() => setSelectedPaymentMethod('apple')}
-            >
-              <Text className="font-semibold">Apple Pay</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Place Order Button */}
-        <TouchableOpacity
-          className="bg-blue-500 px-4 py-3 rounded-lg mb-6"
-          onPress={handlePlaceOrder}
-        >
-          <Text className="text-white text-center text-lg font-semibold">
-            Place Order - ${total.toFixed(2)}
-          </Text>
-        </TouchableOpacity>
+  const renderHeader = () => (
+    <View className="pt-12 px-4">
+      <View className="flex-row items-center mb-6 justify-center">
+        <Text className="text-3xl font-extrabold text-red-700 tracking-widest mr-2">🧾</Text>
+        <Text className="text-3xl font-extrabold text-red-700 tracking-widest">Checkout</Text>
       </View>
-    </ScrollView>
+    </View>
+  );
+
+  const renderAddresses = () => (
+    <View className="px-4 mb-6">
+      <Text className="text-xl font-bold mb-4 text-red-700">Shipping Address</Text>
+      <FlatList
+        data={savedAddresses}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => setSelectedAddress(item.id)}
+            className={`mr-4 p-4 rounded-2xl border-2 ${
+              selectedAddress === item.id ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white'
+            }`}
+            style={{ width: 280 }}
+          >
+            <Text className="font-semibold text-gray-800 mb-2">{item.name}</Text>
+            <Text className="text-gray-600">{item.street}</Text>
+            <Text className="text-gray-600">{`${item.city}, ${item.state} ${item.zipCode}`}</Text>
+            <Text className="text-gray-600">{item.country}</Text>
+          </TouchableOpacity>
+        )}
+      />
+      <TouchableOpacity
+        className="bg-red-600 px-4 py-2 rounded-full mt-2 shadow-lg"
+        onPress={() => setShowNewAddressForm(true)}
+      >
+        <Text className="text-white text-center font-semibold">Add New Address</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderPaymentMethods = () => (
+    <View className="px-4 mb-6">
+      <Text className="text-xl font-bold mb-4 text-red-700">Payment Method</Text>
+      <FlatList
+        data={PAYMENT_METHODS}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => setSelectedPaymentMethod(item)}
+            className={`mr-4 p-4 rounded-2xl border-2 ${
+              selectedPaymentMethod.id === item.id ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white'
+            }`}
+            style={{ width: 280 }}
+          >
+            <Text className="font-semibold text-gray-800 mb-2">
+              {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+            </Text>
+            <Text className="text-gray-600">•••• {item.last4}</Text>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  );
+
+  const renderOrderSummary = () => (
+    <View className="px-4 mb-6">
+      <Text className="text-xl font-bold mb-4 text-red-700">Order Summary</Text>
+      <View className="bg-white rounded-2xl p-6 shadow">
+        {cart.map((item) => (
+          <View key={item.id} className="flex-row justify-between mb-2">
+            <Text className="text-gray-800">{item.name} x {item.quantity}</Text>
+            <Text className="text-gray-800">${(item.price * item.quantity).toFixed(2)}</Text>
+          </View>
+        ))}
+        <View className="border-t border-gray-200 mt-4 pt-4">
+          <View className="flex-row justify-between">
+            <Text className="font-semibold">Total</Text>
+            <Text className="font-semibold">${total.toFixed(2)}</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderFooter = () => (
+    <View className="px-4 pb-12">
+      <TouchableOpacity
+        className="bg-red-600 px-8 py-3 rounded-full shadow-lg items-center"
+        onPress={handlePlaceOrder}
+      >
+        <Text className="text-white text-lg font-semibold">Place Order - ${total.toFixed(2)}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <View className="flex-1 bg-gradient-to-b from-yellow-50 to-red-100">
+      <FlatList
+        data={[]}
+        renderItem={() => null}
+        ListHeaderComponent={
+          <>
+            {renderHeader()}
+            {renderAddresses()}
+            {renderPaymentMethods()}
+            {renderOrderSummary()}
+          </>
+        }
+        ListFooterComponent={renderFooter}
+        showsVerticalScrollIndicator={false}
+      />
+      {/* Floating Action Buttons */}
+      <ProfileButton />
+      <OrdersButton />
+      <FavoritesButton />
+      <CartButton />
+    </View>
   );
 } 

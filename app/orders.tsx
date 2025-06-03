@@ -1,131 +1,79 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useOrders } from '../lib/orderContext';
+import CartButton from './components/CartButton';
+import FavoritesButton from './components/FavoritesButton';
+import OrdersButton from './components/OrdersButton';
+import ProfileButton from './components/ProfileButton';
+import { Order } from '../lib/types';
 
-interface Order {
-  id: string;
-  date: string;
-  status: 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  items: {
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-  }[];
-  total: number;
-  trackingNumber?: string;
-  shippingAddress: {
-    name: string;
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-}
-
-// Mock orders data
-const mockOrders: Order[] = [
-  {
-    id: '1',
-    date: '2024-03-15',
-    status: 'delivered',
-    items: [
-      { id: '1', name: 'Black Pepper', quantity: 2, price: 5.99 },
-      { id: '2', name: 'Cinnamon', quantity: 1, price: 4.99 },
-    ],
-    total: 16.97,
-    trackingNumber: 'TRK123456789',
-    shippingAddress: {
-      name: 'Home',
-      street: '123 Main St',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10001',
-      country: 'USA',
-    },
-  },
-  {
-    id: '2',
-    date: '2024-03-10',
-    status: 'shipped',
-    items: [
-      { id: '3', name: 'Turmeric', quantity: 1, price: 6.99 },
-    ],
-    total: 6.99,
-    trackingNumber: 'TRK987654321',
-    shippingAddress: {
-      name: 'Office',
-      street: '456 Work Ave',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10002',
-      country: 'USA',
-    },
-  },
-];
-
-export default function Orders() {
+export default function OrdersScreen() {
   const router = useRouter();
+  const { orders, clearOrders } = useOrders();
 
-  const getStatusColor = (status: Order['status']) => {
-    switch (status) {
-      case 'processing':
-        return 'bg-yellow-500';
-      case 'shipped':
-        return 'bg-blue-500';
-      case 'delivered':
-        return 'bg-green-500';
-      case 'cancelled':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
+  const renderHeader = () => (
+    <View className="pt-12 px-4">
+      <View className="flex-row items-center mb-6 justify-center">
+        <Text className="text-3xl font-extrabold text-red-700 tracking-widest mr-2">📦</Text>
+        <Text className="text-3xl font-extrabold text-red-700 tracking-widest">Orders</Text>
+      </View>
+      <TouchableOpacity
+        className="bg-red-100 border border-red-600 px-4 py-2 rounded-full self-center mb-2"
+        onPress={clearOrders}
+        accessibilityLabel="Clear all orders (dev only)"
+      >
+        <Text className="text-red-600 font-semibold">Clear All Orders (Dev)</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  const renderEmptyState = () => (
+    <View className="items-center justify-center mt-16 mb-16">
+      <Text className="text-gray-500 text-lg mb-2">No orders yet.</Text>
+      <TouchableOpacity className="bg-red-600 px-6 py-2 rounded-full shadow-lg" onPress={() => router.push('/products')}>
+        <Text className="text-white font-semibold">Start Shopping</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderOrder = ({ item }: { item: Order }) => (
+    <TouchableOpacity
+      onPress={() => router.push(`/orders/${item.id}`)}
+      className="bg-white/90 rounded-2xl p-4 mb-4 mx-4 shadow"
+    >
+      <View className="flex-row justify-between items-center mb-2">
+        <Text className="font-semibold text-gray-800">Order #{item.id}</Text>
+        <Text className={`font-semibold ${
+          item.status === 'delivered' ? 'text-green-600' :
+          item.status === 'cancelled' ? 'text-red-600' :
+          'text-yellow-600'
+        }`}>
+          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+        </Text>
+      </View>
+      <Text className="text-gray-600 mb-2">{new Date(item.date).toLocaleDateString()}</Text>
+      <View className="flex-row justify-between items-center">
+        <Text className="text-gray-700">{item.items.length} items</Text>
+        <Text className="font-semibold text-gray-800">${item.total.toFixed(2)}</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <ScrollView className="flex-1 bg-gray-100">
-      <View className="p-4">
-        <Text className="text-2xl font-bold mb-6">Order History</Text>
-        {mockOrders.map((order) => (
-          <TouchableOpacity
-            key={order.id}
-            className="bg-white rounded-lg p-4 mb-4"
-            onPress={() => router.push(`/orders/${order.id}`)}
-          >
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="font-semibold">Order #{order.id}</Text>
-              <Text className="text-gray-500">{formatDate(order.date)}</Text>
-            </View>
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-gray-600">Total: ${order.total.toFixed(2)}</Text>
-              <View className={`px-2 py-1 rounded-full ${getStatusColor(order.status)}`}>
-                <Text className="text-white text-sm capitalize">{order.status}</Text>
-              </View>
-            </View>
-            {order.trackingNumber && (
-              <Text className="text-gray-600 mb-2">
-                Tracking: {order.trackingNumber}
-              </Text>
-            )}
-            <View className="border-t border-gray-200 mt-2 pt-2">
-              <Text className="text-gray-600">Shipping to: {order.shippingAddress.name}</Text>
-              <Text className="text-gray-600">{order.shippingAddress.street}</Text>
-              <Text className="text-gray-600">
-                {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ScrollView>
+    <View className="flex-1 bg-gradient-to-b from-yellow-50 to-red-100">
+      <FlatList
+        data={orders}
+        renderItem={renderOrder}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmptyState}
+        showsVerticalScrollIndicator={false}
+      />
+      {/* Floating Action Buttons */}
+      <ProfileButton />
+      <OrdersButton />
+      <FavoritesButton />
+      <CartButton />
+    </View>
   );
 } 

@@ -1,17 +1,22 @@
+import React from 'react';
 import { useCart } from '../lib/cartContext';
 import { View, Text, TouchableOpacity, Image, FlatList, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { addOrder } from '../lib/orders';
+import CartButton from './components/CartButton';
+import FavoritesButton from './components/FavoritesButton';
+import OrdersButton from './components/OrdersButton';
+import ProfileButton from './components/ProfileButton';
+import { CartItem } from '../lib/types';
 
 export default function CartScreen() {
-  const { cart, updateQty, removeFromCart, clearCart } = useCart();
+  const { cart, updateQuantity, removeFromCart, clearCart } = useCart();
   const router = useRouter();
   const [promo, setPromo] = useState('');
   const [discount, setDiscount] = useState(0);
   const [checkingOut, setCheckingOut] = useState(false);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const subtotal = cart.reduce((sum: number, item: { price: number; quantity: number }) => sum + item.price * item.quantity, 0);
   const total = subtotal - discount;
 
   const handleApplyPromo = () => {
@@ -27,65 +32,145 @@ export default function CartScreen() {
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setCheckingOut(true);
-    const orderId = Date.now().toString();
-    await addOrder(cart, total, promo.trim() ? promo.trim().toUpperCase() : undefined, discount);
-    clearCart();
-    setPromo('');
-    setDiscount(0);
-    setCheckingOut(false);
-    Alert.alert('Order Placed', 'Your order has been placed!');
-    router.push({ pathname: '/orders/success', params: { id: orderId } });
+    // In a real app, you would process the order here
+    setTimeout(() => {
+      clearCart();
+      setPromo('');
+      setDiscount(0);
+      setCheckingOut(false);
+      Alert.alert('Order Placed', 'Your order has been placed!');
+      router.push('/checkout');
+    }, 1000);
   };
 
-  return (
-    <View className="flex-1 bg-red-600 pt-12 px-4">
-      <TouchableOpacity onPress={() => router.back()} className="mb-4">
-        <Text className="text-white text-lg">← Back</Text>
+  const renderHeader = () => (
+    <View className="pt-12 px-4">
+      <View className="flex-row items-center mb-6 justify-center">
+        <Text className="text-3xl font-extrabold text-red-700 tracking-widest mr-2">🛒</Text>
+        <Text className="text-3xl font-extrabold text-red-700 tracking-widest">Cart</Text>
+      </View>
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View className="items-center justify-center mt-16 mb-16">
+      <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2038/2038854.png' }} className="w-32 h-32 mb-4 opacity-80" />
+      <Text className="text-gray-500 text-lg mb-2">Your cart is empty.</Text>
+      <TouchableOpacity className="bg-red-600 px-6 py-2 rounded-full shadow-lg" onPress={() => router.push('/products')}>
+        <Text className="text-white font-semibold">Shop Now</Text>
       </TouchableOpacity>
-      <Text className="text-white text-2xl font-bold font-serif tracking-widest mb-6 self-center">Cart</Text>
-      <FlatList
-        data={cart}
-        keyExtractor={item => item.id}
-        ListEmptyComponent={<Text className="text-white text-center mt-8">Your cart is empty.</Text>}
-        renderItem={({ item }) => (
-          <View className="flex-row items-center bg-white rounded-xl p-4 mb-4 shadow">
-            <Image source={{ uri: item.image }} className="w-16 h-16 rounded-lg mr-4" />
-            <View className="flex-1">
-              <Text className="text-lg font-bold mb-1">{item.name}</Text>
-              <Text className="text-red-500 font-bold mb-1">${item.price}</Text>
-              <View className="flex-row items-center">
-                <TouchableOpacity onPress={() => updateQty(item.id, item.qty - 1)} className="bg-gray-200 px-2 py-1 rounded-full mr-2"><Text>-</Text></TouchableOpacity>
-                <Text className="mx-2">{item.qty}</Text>
-                <TouchableOpacity onPress={() => updateQty(item.id, item.qty + 1)} className="bg-gray-200 px-2 py-1 rounded-full ml-2"><Text>+</Text></TouchableOpacity>
+    </View>
+  );
+
+  const renderFooter = () => (
+    <View className="px-4 pb-12">
+      {cart.length > 0 && (
+        <>
+          {/* Promo Code */}
+          <View className="bg-white/90 rounded-2xl p-6 mb-6 shadow">
+            <Text className="text-xl font-bold mb-4 text-red-700">Promo Code</Text>
+            <View className="flex-row">
+              <TextInput
+                className="flex-1 bg-white rounded-l-full px-4 py-2 border border-gray-200 mr-2"
+                placeholder="Enter promo code"
+                value={promo}
+                onChangeText={setPromo}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity
+                className="bg-red-600 px-6 py-2 rounded-r-full"
+                onPress={handleApplyPromo}
+              >
+                <Text className="text-white font-semibold">Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Order Summary */}
+          <View className="bg-white/90 rounded-2xl p-6 mb-6 shadow">
+            <Text className="text-xl font-bold mb-4 text-red-700">Order Summary</Text>
+            <View className="space-y-2">
+              <View className="flex-row justify-between">
+                <Text className="text-gray-600">Subtotal</Text>
+                <Text className="text-gray-800">${subtotal.toFixed(2)}</Text>
+              </View>
+              {discount > 0 && (
+                <View className="flex-row justify-between">
+                  <Text className="text-gray-600">Discount</Text>
+                  <Text className="text-green-600">-${discount.toFixed(2)}</Text>
+                </View>
+              )}
+              <View className="border-t border-gray-200 pt-2 mt-2">
+                <View className="flex-row justify-between">
+                  <Text className="font-semibold text-gray-800">Total</Text>
+                  <Text className="font-semibold text-gray-800">${total.toFixed(2)}</Text>
+                </View>
               </View>
             </View>
-            <TouchableOpacity onPress={() => removeFromCart(item.id)} className="ml-2"><Text className="text-red-500 text-xl">×</Text></TouchableOpacity>
           </View>
-        )}
+
+          {/* Checkout Button */}
+          <TouchableOpacity
+            className="bg-red-600 px-8 py-3 rounded-full shadow-lg items-center"
+            onPress={handleCheckout}
+            disabled={checkingOut}
+            accessibilityLabel="Proceed to checkout"
+          >
+            <Text className="text-white text-lg font-semibold">{checkingOut ? 'Processing...' : 'Proceed to Checkout'}</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+
+  const renderItem = ({ item }: { item: CartItem }) => (
+    <View className="bg-white/90 rounded-2xl p-4 mb-4 mx-4 shadow">
+      <View className="flex-row items-center">
+        <Image source={{ uri: item.image }} className="w-20 h-20 rounded-lg mr-4" />
+        <View className="flex-1">
+          <Text className="font-semibold text-gray-800 mb-1">{item.name}</Text>
+          <Text className="text-gray-600 mb-2">${item.price.toFixed(2)}</Text>
+          <View className="flex-row items-center">
+            <TouchableOpacity
+              onPress={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+              className="bg-gray-200 px-3 py-1 rounded-full"
+            >
+              <Text className="text-lg">-</Text>
+            </TouchableOpacity>
+            <Text className="mx-4 text-gray-800">{item.quantity}</Text>
+            <TouchableOpacity
+              onPress={() => updateQuantity(item.id, item.quantity + 1)}
+              className="bg-gray-200 px-3 py-1 rounded-full"
+            >
+              <Text className="text-lg">+</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => removeFromCart(item.id)}
+              className="ml-auto"
+            >
+              <Text className="text-red-600">Remove</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  return (
+    <View className="flex-1 bg-gradient-to-b from-yellow-50 to-red-100">
+      <FlatList
+        data={cart}
+        renderItem={renderItem}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmptyState}
+        ListFooterComponent={renderFooter}
+        showsVerticalScrollIndicator={false}
       />
-      <View className="mt-4 mb-2">
-        <TextInput
-          className="bg-white rounded-lg px-4 py-2 mb-2 text-base"
-          placeholder="Promo code"
-          value={promo}
-          onChangeText={setPromo}
-        />
-        <TouchableOpacity className="bg-black px-4 py-2 rounded-lg items-center mb-2" onPress={handleApplyPromo}>
-          <Text className="text-white font-semibold">Apply Promo</Text>
-        </TouchableOpacity>
-      </View>
-      <View className="mb-4">
-        <Text className="text-white text-base">Subtotal: ${subtotal.toFixed(2)}</Text>
-        {discount > 0 && <Text className="text-green-400 text-base">Discount: -${discount.toFixed(2)}</Text>}
-        <Text className="text-white text-xl font-bold text-right">Total: ${total.toFixed(2)}</Text>
-      </View>
-      <TouchableOpacity
-        className="bg-green-600 px-6 py-3 rounded-lg shadow-lg items-center mb-8"
-        onPress={handleCheckout}
-        disabled={cart.length === 0 || checkingOut}
-      >
-        <Text className="text-white text-lg font-semibold">{checkingOut ? 'Processing...' : 'Checkout'}</Text>
-      </TouchableOpacity>
+      {/* Floating Action Buttons */}
+      <ProfileButton />
+      <OrdersButton />
+      <FavoritesButton />
+      <CartButton />
     </View>
   );
 } 

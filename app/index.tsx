@@ -1,4 +1,4 @@
-import { View } from "react-native";
+import { View, Text } from "react-native";
 import "../global.css";
 
 import LandingScreen from "./LandingScreen";
