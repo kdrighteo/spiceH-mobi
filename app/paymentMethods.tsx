@@ -49,8 +49,9 @@ export default function PaymentMethodsScreen() {
   const renderMethod = ({ item }: { item: PaymentMethod }) => (
     <View className={`bg-white/90 rounded-2xl p-6 mb-4 mx-4 shadow ${item.isDefault ? 'border-2 border-red-600' : ''}`}>
       <View className="flex-row justify-between items-center mb-2">
-        <Text className="font-semibold text-gray-800">{item.type.charAt(0).toUpperCase() + item.type.slice(1)} {item.type !== 'paypal' ? 'Card' : ''}</Text>
-        {item.isDefault && <Text className="text-xs text-red-600 font-bold">Default</Text>}
+        <Text className="text-2xl mr-2">{item.type === 'credit' ? '💳' : item.type === 'debit' ? '🏦' : '🅿️'}</Text>
+        <Text className="font-semibold text-gray-800 flex-1">{item.type.charAt(0).toUpperCase() + item.type.slice(1)} {item.type !== 'paypal' ? 'Card' : ''}</Text>
+        {item.isDefault && <Text className="text-xs text-red-600 font-bold ml-2">Default</Text>}
       </View>
       <Text className="text-gray-600 mb-2">•••• {item.last4}</Text>
       <View className="flex-row space-x-2 mt-2">
@@ -131,8 +132,9 @@ export default function PaymentMethodsScreen() {
             ListEmptyComponent={
               <View className="items-center justify-center py-16 px-4">
                 <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/484/484167.png' }} className="w-24 h-24 mb-4 opacity-80" />
+                <Text className="text-2xl mb-2">💳</Text>
                 <Text className="text-lg font-bold text-gray-700 mb-2 text-center">No payment methods saved yet.</Text>
-                <Text className="text-gray-500 text-base mb-2 text-center">Add a payment method to make checkout faster!</Text>
+                <Text className="text-gray-500 text-base mb-2 text-center">Add a payment method to make checkout faster and easier!</Text>
                 <TouchableOpacity className="bg-red-600 px-8 py-3 rounded-full shadow-lg mt-2" onPress={() => setAdding(true)}>
                   <Text className="text-white text-lg font-semibold">Add Payment Method</Text>
                 </TouchableOpacity>

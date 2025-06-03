@@ -84,29 +84,7 @@ export default function LandingScreen() {
 
   const renderQuickAccess = () => (
     <View className="flex-row justify-center mb-8 space-x-4">
-      {currentUser ? (
-        <TouchableOpacity
-          className="bg-black px-6 py-3 rounded-full shadow-lg items-center flex-1"
-          onPress={() => router.push('/profile')}
-        >
-          <Text className="text-white text-lg font-semibold">Profile</Text>
-        </TouchableOpacity>
-      ) : (
-        <>
-          <TouchableOpacity
-            className="bg-black px-6 py-3 rounded-full shadow-lg items-center flex-1"
-            onPress={() => router.push('/SignUp')}
-          >
-            <Text className="text-white text-lg font-semibold">Sign Up</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-white px-6 py-3 rounded-full shadow-lg items-center flex-1 border border-black"
-            onPress={() => router.push('/Login')}
-          >
-            <Text className="text-black text-lg font-semibold">Log In</Text>
-          </TouchableOpacity>
-        </>
-      )}
+      {/* No quick access buttons for guests or logged-in users */}
     </View>
   );
 

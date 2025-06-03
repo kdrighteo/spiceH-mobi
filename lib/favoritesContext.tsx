@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 
 export type FavoritesContextType = {
   favorites: string[];
@@ -19,12 +20,16 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(FAVORITES_KEY).then(data => {
       if (data) setFavorites(JSON.parse(data));
+    }).catch(() => {
+      Alert.alert('Error', 'Failed to load favorites. Please try again.');
     });
   }, []);
 
   // Save favorites to storage whenever they change
   useEffect(() => {
-    AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+    AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)).catch(() => {
+      Alert.alert('Error', 'Failed to save favorites. Please try again.');
+    });
   }, [favorites]);
 
   const addFavorite = (id: string) => {

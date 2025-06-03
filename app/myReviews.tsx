@@ -12,6 +12,7 @@ export default function MyReviewsScreen() {
   const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
 
   useEffect(() => {
     (async () => {
@@ -31,6 +32,14 @@ export default function MyReviewsScreen() {
       } },
     ]);
   };
+
+  const sortedReviews = [...reviews].sort((a, b) => {
+    if (sort === 'newest') return new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (sort === 'oldest') return new Date(a.date).getTime() - new Date(b.date).getTime();
+    if (sort === 'highest') return b.rating - a.rating;
+    if (sort === 'lowest') return a.rating - b.rating;
+    return 0;
+  });
 
   const renderReview = ({ item }: { item: Review }) => {
     const product = products.find(p => p.id === item.productId);
@@ -62,13 +71,27 @@ export default function MyReviewsScreen() {
           <Text className="text-3xl font-extrabold text-red-700 tracking-widest">My Reviews</Text>
         </View>
       </View>
+      <View className="flex-row justify-center mb-4">
+        {['newest', 'oldest', 'highest', 'lowest'].map(option => (
+          <TouchableOpacity
+            key={option}
+            className={`px-4 py-2 mx-1 rounded-full ${sort === option ? 'bg-red-600' : 'bg-gray-200'}`}
+            onPress={() => setSort(option as any)}
+          >
+            <Text className={sort === option ? 'text-white font-semibold' : 'text-gray-800 font-semibold'}>
+              {option.charAt(0).toUpperCase() + option.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <FlatList
-        data={reviews}
+        data={sortedReviews}
         renderItem={renderReview}
         keyExtractor={(_, i) => i.toString()}
         ListEmptyComponent={
           <View className="items-center justify-center py-16 px-4">
             <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2278/2278992.png' }} className="w-24 h-24 mb-4 opacity-80" />
+            <Text className="text-2xl mb-2">📝</Text>
             <Text className="text-lg font-bold text-gray-700 mb-2 text-center">You haven't written any reviews yet.</Text>
             <Text className="text-gray-500 text-base mb-2 text-center">Share your experience with our products to help others!</Text>
             <TouchableOpacity className="bg-red-600 px-8 py-3 rounded-full shadow-lg mt-2" onPress={() => router.push('/products')}>

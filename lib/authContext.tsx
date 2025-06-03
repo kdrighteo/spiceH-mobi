@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 
 export type User = {
   email: string;
@@ -40,29 +41,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = async (email: string, password: string, name: string) => {
-    const data = await AsyncStorage.getItem(USERS_KEY);
-    const users: User[] = data ? JSON.parse(data) : [];
-    if (users.find(u => u.email === email)) return false;
-    users.push({ email, password, name });
-    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
-    await AsyncStorage.setItem(SESSION_KEY, email);
-    setCurrentUser({ email, password, name });
-    return true;
+    try {
+      const data = await AsyncStorage.getItem(USERS_KEY);
+      const users: User[] = data ? JSON.parse(data) : [];
+      if (users.find(u => u.email === email)) return false;
+      users.push({ email, password, name });
+      await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
+      await AsyncStorage.setItem(SESSION_KEY, email);
+      setCurrentUser({ email, password, name });
+      return true;
+    } catch (error) {
+      Alert.alert('Error', 'Failed to sign up. Please try again.');
+      return false;
+    }
   };
 
   const login = async (email: string, password: string) => {
-    const data = await AsyncStorage.getItem(USERS_KEY);
-    const users: User[] = data ? JSON.parse(data) : [];
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) return false;
-    await AsyncStorage.setItem(SESSION_KEY, email);
-    setCurrentUser(user);
-    return true;
+    try {
+      const data = await AsyncStorage.getItem(USERS_KEY);
+      const users: User[] = data ? JSON.parse(data) : [];
+      const user = users.find(u => u.email === email && u.password === password);
+      if (!user) return false;
+      await AsyncStorage.setItem(SESSION_KEY, email);
+      setCurrentUser(user);
+      return true;
+    } catch (error) {
+      Alert.alert('Error', 'Failed to log in. Please try again.');
+      return false;
+    }
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem(SESSION_KEY);
-    setCurrentUser(null);
+    try {
+      await AsyncStorage.removeItem(SESSION_KEY);
+      setCurrentUser(null);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
   };
 
   return (

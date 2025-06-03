@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Order, CartItem, Address, PaymentMethod } from './types';
+import { Alert } from 'react-native';
 
 interface OrderContextType {
   orders: Order[];
@@ -29,7 +30,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         setOrders(JSON.parse(savedOrders));
       }
     } catch (error) {
-      console.error('Error loading orders:', error);
+      Alert.alert('Error', 'Failed to load orders. Please try again.');
     }
   };
 
@@ -37,7 +38,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     try {
       await AsyncStorage.setItem('orders', JSON.stringify(orders));
     } catch (error) {
-      console.error('Error saving orders:', error);
+      Alert.alert('Error', 'Failed to save orders. Please try again.');
     }
   };
 
@@ -50,8 +51,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       trackingNumber: undefined,
       estimatedDelivery: undefined,
     };
-    console.log('Saving new order:', newOrder);
-    console.log('Total amount saved:', newOrder.total);
     const updatedOrders = [...orders, newOrder];
     setOrders(updatedOrders);
     await saveOrders();
