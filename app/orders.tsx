@@ -41,11 +41,11 @@ export default function OrdersScreen() {
 
   const renderOrder = ({ item }: { item: Order }) => (
     <TouchableOpacity
-      onPress={() => router.push(`/orders/${item.id}`)}
+      onPress={() => router.push(`/orders/${(item as any).$id}`)}
       className="bg-white/90 rounded-2xl p-4 mb-4 mx-4 shadow"
     >
       <View className="flex-row justify-between items-center mb-2">
-        <Text className="font-semibold text-gray-800">Order #{item.id}</Text>
+        <Text className="font-semibold text-gray-800">Order #{(item as any).$id}</Text>
         <Text className={`font-semibold ${
           item.status === 'delivered' ? 'text-green-600' :
           item.status === 'cancelled' ? 'text-red-600' :

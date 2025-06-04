@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, FlatList, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, FlatList, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '../lib/favoritesContext';
-import { products } from '../lib/products';
+import { fetchProducts } from '../lib/productsApi';
 import CartButton from './components/CartButton';
 import FavoritesButton from './components/FavoritesButton';
 import OrdersButton from './components/OrdersButton';
@@ -12,7 +12,25 @@ import { Product } from '../lib/types';
 export default function FavoritesScreen() {
   const router = useRouter();
   const { favorites, addFavorite, removeFavorite } = useFavorites();
-  const favoriteProducts = products.filter(p => favorites.includes(p.id));
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchProducts();
+        setProducts((data as unknown as Product[]).filter(p => p.$id && p.name && p.description && p.price && p.image));
+      } catch (error) {
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  const favoriteProducts = products.filter(p => p.$id && favorites.includes(p.$id));
 
   const renderHeader = () => (
     <View className="pt-12 px-4">
@@ -36,20 +54,21 @@ export default function FavoritesScreen() {
 
   const renderItem = ({ item }: { item: Product }) => (
     <TouchableOpacity
-      onPress={() => router.push(`/products/${item.id}`)}
+      onPress={() => router.push(`/products/${item.$id}`)}
       className="bg-white/90 rounded-2xl p-4 mb-4 mx-4 shadow"
     >
       <View className="flex-row items-center">
+        <Image source={{ uri: item.image }} className="w-20 h-20 rounded-xl mr-4" />
         <View className="flex-1">
           <Text className="font-semibold text-gray-800 mb-1">{item.name}</Text>
-          <Text className="text-gray-600 mb-2">${item.price.toFixed(2)}</Text>
+          <Text className="text-gray-600 mb-2">${item.price?.toFixed(2) ?? 'N/A'}</Text>
           <Text className="text-gray-600 text-sm" numberOfLines={2}>{item.description}</Text>
         </View>
         <TouchableOpacity
-          onPress={() => removeFavorite(item.id)}
+          onPress={() => favorites.includes(item.$id ?? '') ? removeFavorite(item.$id ?? '') : addFavorite(item.$id ?? '')}
           className="ml-4"
         >
-          <Text className="text-2xl">❤️</Text>
+          <Text className="text-2xl">{favorites.includes(item.$id ?? '') ? '❤️' : '🤍'}</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -57,13 +76,19 @@ export default function FavoritesScreen() {
 
   return (
     <View className="flex-1 bg-gradient-to-b from-yellow-50 to-red-100">
-      <FlatList
-        data={favoriteProducts}
-        renderItem={renderItem}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#e3342f" />
+        </View>
+      ) : (
+        <FlatList
+          data={favoriteProducts}
+          renderItem={renderItem}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
       {/* Floating Action Buttons */}
       <ProfileButton />
       <OrdersButton />

@@ -25,29 +25,27 @@ export default function RootLayout() {
         <FavoritesProvider>
           <OrderProvider>
             <Stack>
-              {showOnboarding ? (
-                <Stack.Screen name="Onboarding" options={{ headerShown: false }} />
-              ) : (
-                <>
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen name="home" options={{ headerShown: false }} />
-                  <Stack.Screen name="products" options={{ headerShown: false }} />
-                  <Stack.Screen name="product/[id]" options={{ headerShown: false }} />
-                  <Stack.Screen name="cart" options={{ headerShown: false }} />
-                  <Stack.Screen name="checkout" options={{ headerShown: false }} />
-                  <Stack.Screen name="orders" options={{ headerShown: false }} />
-                  <Stack.Screen name="orders/[id]" options={{ headerShown: false }} />
-                  <Stack.Screen name="profile" options={{ headerShown: false }} />
-                  <Stack.Screen name="addressBook" options={{ headerShown: false }} />
-                  <Stack.Screen name="paymentMethods" options={{ headerShown: false }} />
-                  <Stack.Screen name="settings" options={{ headerShown: false }} />
-                  <Stack.Screen name="myReviews" options={{ headerShown: false }} />
-                  <Stack.Screen name="LandingScreen" options={{ headerShown: false }} />
-                  <Stack.Screen name="Login" options={{ headerShown: false }} />
-                  <Stack.Screen name="SignUp" options={{ headerShown: false }} />
-                  <Stack.Screen name="HomeScreen" options={{ headerShown: false }} />
-                </>
-              )}
+              {showOnboarding
+                ? <Stack.Screen name="Onboarding" options={{ headerShown: false }} />
+                : [
+                    <Stack.Screen key="index" name="index" options={{ headerShown: false }} />,
+                    <Stack.Screen key="home" name="home" options={{ headerShown: false }} />,
+                    <Stack.Screen key="products" name="products" options={{ headerShown: false }} />,
+                    <Stack.Screen key="products/[id]" name="products/[id]" options={{ headerShown: false }} />,
+                    <Stack.Screen key="cart" name="cart" options={{ headerShown: false }} />,
+                    <Stack.Screen key="checkout" name="checkout" options={{ headerShown: false }} />,
+                    <Stack.Screen key="orders" name="orders" options={{ headerShown: false }} />,
+                    <Stack.Screen key="orders/[id]" name="orders/[id]" options={{ headerShown: false }} />,
+                    <Stack.Screen key="profile" name="profile" options={{ headerShown: false }} />,
+                    <Stack.Screen key="addressBook" name="addressBook" options={{ headerShown: false }} />,
+                    <Stack.Screen key="paymentMethods" name="paymentMethods" options={{ headerShown: false }} />,
+                    <Stack.Screen key="settings" name="settings" options={{ headerShown: false }} />,
+                    <Stack.Screen key="myReviews" name="myReviews" options={{ headerShown: false }} />,
+                    <Stack.Screen key="LandingScreen" name="LandingScreen" options={{ headerShown: false }} />,
+                    <Stack.Screen key="Login" name="Login" options={{ headerShown: false }} />,
+                    <Stack.Screen key="HomeScreen" name="HomeScreen" options={{ headerShown: false }} />
+                  ]
+              }
             </Stack>
           </OrderProvider>
         </FavoritesProvider>

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, TextInput, Image, Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, FlatList, TextInput, Image, Animated, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { products } from '../lib/products';
+import { fetchProducts } from '../lib/productsApi';
 import { useFavorites } from '../lib/favoritesContext';
 import CartButton from './components/CartButton';
 import FavoritesButton from './components/FavoritesButton';
@@ -46,14 +46,14 @@ const AnimatedProductCard = ({ item, onPress, isFavorite, addFavorite, removeFav
         <View className="flex-row items-center">
           <View className="flex-1">
             <Text className="font-semibold text-gray-800 mb-1">{item.name}</Text>
-            <Text className="text-gray-600 mb-2">${item.price.toFixed(2)}</Text>
+            <Text className="text-gray-600 mb-2">${item.price?.toFixed(2) ?? 'N/A'}</Text>
             <Text className="text-gray-600 text-sm" numberOfLines={2}>{item.description}</Text>
           </View>
           <TouchableOpacity
-            onPress={() => isFavorite(item.id) ? removeFavorite(item.id) : addFavorite(item.id)}
+            onPress={() => isFavorite(item.$id) ? removeFavorite(item.$id) : addFavorite(item.$id)}
             className="ml-4"
           >
-            <Text className="text-2xl">{isFavorite(item.id) ? '❤️' : '🤍'}</Text>
+            <Text className="text-2xl">{isFavorite(item.$id) ? '❤️' : '🤍'}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -66,10 +66,27 @@ export default function ProductsScreen() {
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchProducts();
+        setProducts(data);
+      } catch (error) {
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -124,7 +141,7 @@ export default function ProductsScreen() {
   const renderItem = ({ item }: { item: Product }) => (
     <AnimatedProductCard
       item={item}
-      onPress={() => router.push(`/products/${item.id}`)}
+      onPress={() => router.push(`/products/${item.$id}`)}
       isFavorite={isFavorite}
       addFavorite={addFavorite}
       removeFavorite={removeFavorite}
@@ -144,19 +161,25 @@ export default function ProductsScreen() {
 
   return (
     <View className="flex-1 bg-gradient-to-b from-yellow-50 to-red-100">
-      <FlatList
-        data={filteredProducts}
-        renderItem={renderItem}
-        ListHeaderComponent={
-          <>
-            {renderHeader()}
-            {renderSearch()}
-            {renderCategories()}
-          </>
-        }
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={renderEmptyState}
-      />
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#e3342f" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredProducts}
+          renderItem={renderItem}
+          ListHeaderComponent={
+            <>
+              {renderHeader()}
+              {renderSearch()}
+              {renderCategories()}
+            </>
+          }
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyState}
+        />
+      )}
       {/* Floating Action Buttons */}
       <ProfileButton />
       <OrdersButton />

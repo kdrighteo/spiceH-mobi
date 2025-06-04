@@ -12,7 +12,7 @@ export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { orders, cancelOrder } = useOrders();
-  const order = orders.find(o => o.id === id);
+  const order = orders.find(o => (o as any).$id === id);
   console.log('Retrieved order:', order);
   console.log('Order total:', order?.total);
 
@@ -148,7 +148,7 @@ export default function OrderDetailsScreen() {
         <TouchableOpacity
           className="bg-red-600 px-8 py-3 rounded-full shadow-lg items-center mb-4"
           onPress={() => {
-            cancelOrder(order.id);
+            cancelOrder((order as any).$id);
             router.back();
           }}
         >

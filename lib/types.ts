@@ -1,5 +1,6 @@
 export interface Product {
-  id: string;
+  id?: string; // local/mock id
+  $id?: string; // Appwrite document id
   name: string;
   description: string;
   price: number;

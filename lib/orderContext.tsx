@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Order, CartItem, Address, PaymentMethod } from './types';
 import { Alert } from 'react-native';
+import { createOrder as createOrderApi, fetchOrders as fetchOrdersApi } from './ordersApi';
 
 interface OrderContextType {
   orders: Order[];
-  addOrder: (order: Omit<Order, 'id' | 'date' | 'status' | 'trackingNumber' | 'estimatedDelivery'>) => Promise<Order>;
+  addOrder: (order: Omit<Order, 'id' | 'date' | 'status' | 'trackingNumber' | 'estimatedDelivery'>) => Promise<Order | null>;
   clearOrders: () => void;
   cancelOrder: (orderId: string) => void;
 }
@@ -19,55 +19,44 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     loadOrders();
   }, []);
 
-  useEffect(() => {
-    saveOrders();
-  }, [orders]);
-
   const loadOrders = async () => {
     try {
-      const savedOrders = await AsyncStorage.getItem('orders');
-      if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
-      }
+      // For now, fetch all orders (no user filtering)
+      const fetched = await fetchOrdersApi('');
+      setOrders((fetched as unknown as Order[]));
     } catch (error) {
-      Alert.alert('Error', 'Failed to load orders. Please try again.');
-    }
-  };
-
-  const saveOrders = async () => {
-    try {
-      await AsyncStorage.setItem('orders', JSON.stringify(orders));
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save orders. Please try again.');
+      Alert.alert('Error', 'Failed to load orders from Appwrite.');
     }
   };
 
   const addOrder: OrderContextType['addOrder'] = async (orderData) => {
-    const newOrder: Order = {
-      ...orderData,
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      status: 'processing',
-      trackingNumber: undefined,
-      estimatedDelivery: undefined,
-    };
-    const updatedOrders = [...orders, newOrder];
-    setOrders(updatedOrders);
-    await saveOrders();
-    await loadOrders();
-    return newOrder;
+    try {
+      const newOrder = await createOrderApi({
+        ...orderData,
+        date: new Date().toISOString(),
+        status: 'processing',
+        trackingNumber: undefined,
+        estimatedDelivery: undefined,
+      });
+      await loadOrders();
+      return newOrder as unknown as Order;
+    } catch (error) {
+      Alert.alert('Error', 'Failed to create order.');
+      return null;
+    }
   };
 
   const clearOrders = () => setOrders([]);
 
-  const cancelOrder = (orderId: string) => {
-    const updatedOrders = orders.map(order => 
-      order.id === orderId 
+  const cancelOrder = async (orderId: string) => {
+    // For now, just update locally. To persist, you would update the order in Appwrite.
+    const updatedOrders = orders.map(order =>
+      (order as any).$id === orderId
         ? { ...order, status: 'cancelled' as const }
         : order
     );
     setOrders(updatedOrders);
-    saveOrders();
+    // TODO: Update order status in Appwrite as well
   };
 
   return (

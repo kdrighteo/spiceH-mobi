@@ -1,94 +1,113 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-
-export type User = {
-  email: string;
-  password: string;
-  name: string;
-};
+import { account } from './appwrite';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type AuthContextType = {
-  currentUser: User | null;
+  currentUser: any | null;
   loading: boolean;
   signup: (email: string, password: string, name: string) => Promise<boolean>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
 };
 
-const USERS_KEY = 'spicehaven_users';
-const SESSION_KEY = 'spicehaven_session';
-
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem(SESSION_KEY).then(email => {
-      if (email) {
-        AsyncStorage.getItem(USERS_KEY).then(data => {
-          const users: User[] = data ? JSON.parse(data) : [];
-          const user = users.find(u => u.email === email);
-          setCurrentUser(user || null);
-          setLoading(false);
-        });
-      } else {
+    // Check AsyncStorage first
+    const checkStoredUser = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem('user');
+        if (storedUser) {
+          setCurrentUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error('Error reading stored user:', error);
+      }
+    };
+    checkStoredUser();
+
+    // Then check Appwrite session
+    const getCurrentUser = async () => {
+      try {
+        const user = await account.get();
+        setCurrentUser(user);
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+      } catch (error) {
+        setCurrentUser(null);
+        await AsyncStorage.removeItem('user');
+      } finally {
         setLoading(false);
       }
-    });
+    };
+    getCurrentUser();
   }, []);
 
   const signup = async (email: string, password: string, name: string) => {
     try {
-      const data = await AsyncStorage.getItem(USERS_KEY);
-      const users: User[] = data ? JSON.parse(data) : [];
-      if (users.find(u => u.email === email)) return false;
-      users.push({ email, password, name });
-      await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users));
-      await AsyncStorage.setItem(SESSION_KEY, email);
-      setCurrentUser({ email, password, name });
+      await account.create('unique()', email, password, name);
+      // Automatically log in after sign up
+      await account.createSession(email, password);
+      const user = await account.get();
+      setCurrentUser(user);
+      await AsyncStorage.setItem('user', JSON.stringify(user));
       return true;
-    } catch (error) {
-      Alert.alert('Error', 'Failed to sign up. Please try again.');
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      Alert.alert('Error', error.message || 'Failed to sign up. Please try again.');
       return false;
     }
   };
 
   const login = async (email: string, password: string) => {
     try {
-      const data = await AsyncStorage.getItem(USERS_KEY);
-      const users: User[] = data ? JSON.parse(data) : [];
-      const user = users.find(u => u.email === email && u.password === password);
-      if (!user) return false;
-      await AsyncStorage.setItem(SESSION_KEY, email);
+      await account.createSession(email, password);
+      await account.createSession(email, password);
+      const user = await account.get();
       setCurrentUser(user);
+      await AsyncStorage.setItem('user', JSON.stringify(user));
       return true;
-    } catch (error) {
-      Alert.alert('Error', 'Failed to log in. Please try again.');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      Alert.alert('Error', error.message || 'Failed to log in. Please try again.');
       return false;
     }
   };
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem(SESSION_KEY);
+      await account.deleteSession('current');
+      await AsyncStorage.removeItem('user');
       setCurrentUser(null);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to log out. Please try again.');
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', error.message || 'Failed to log out. Please try again.');
     }
   };
 
+  const value = {
+    currentUser,
+    loading,
+    signup,
+    login,
+    logout
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, loading, signup, login, logout }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 } 

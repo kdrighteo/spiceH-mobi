@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View, Text, Image, TouchableOpacity, TextInput, FlatList, Modal, Dimensions, ScrollView } from 'react-native';
-import { products } from '../../lib/products';
+import { View, Text, Image, TouchableOpacity, TextInput, FlatList, Modal, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
+import { fetchProductById } from '../../lib/productsApi';
 import { useCart } from '../../lib/cartContext';
 import CartButton from '../components/CartButton';
 import { useFavorites } from '../../lib/favoritesContext';
@@ -21,7 +21,8 @@ const TABS = [
 export default function ProductDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const product = products.find(p => p.id === id);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'usage' | 'conditions' | 'expiration' | 'reviews'>('usage');
   const [qty, setQty] = useState(1);
   const { addToCart } = useCart();
@@ -36,16 +37,31 @@ export default function ProductDetails() {
   const [zoomVisible, setZoomVisible] = useState(false);
 
   useEffect(() => {
-    if (product) {
+    if (id) {
       (async () => {
-        const productReviews = await getReviews(product.id);
-        setReviews(productReviews);
-        const avgData = await getAverageRating(product.id);
-        setAvgRating(avgData.avg);
-        setReviewCount(avgData.count);
+        setLoading(true);
+        const prod = await fetchProductById(id as string);
+        setProduct(prod);
+        setLoading(false);
+        if (prod) {
+          const productReviews = await getReviews(prod.$id);
+          setReviews(productReviews);
+          const avgData = await getAverageRating(prod.$id);
+          setAvgRating(avgData.avg);
+          setReviewCount(avgData.count);
+        }
       })();
     }
-  }, [product]);
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-gradient-to-b from-yellow-50 to-red-100 items-center justify-center">
+        <ActivityIndicator size="large" color="#e3342f" />
+        <Text className="text-gray-500 text-lg mt-4">Loading...</Text>
+      </View>
+    );
+  }
 
   if (!product) {
     return (
@@ -63,10 +79,10 @@ export default function ProductDetails() {
   const handleSubmitReview = async () => {
     if (!reviewText.trim()) return;
     setSubmitting(true);
-    await addReview(product.id, reviewRating, reviewText);
-    const updatedReviews = await getReviews(product.id);
+    await addReview(product.$id, reviewRating, reviewText);
+    const updatedReviews = await getReviews(product.$id);
     setReviews(updatedReviews);
-    const avgData = await getAverageRating(product.id);
+    const avgData = await getAverageRating(product.$id);
     setAvgRating(avgData.avg);
     setReviewCount(avgData.count);
     setReviewText('');
@@ -203,12 +219,12 @@ export default function ProductDetails() {
         <View className="flex-row items-center justify-between mb-2">
           <Text className="text-3xl font-extrabold text-red-700 font-serif tracking-widest flex-1">{product.name}</Text>
           <TouchableOpacity
-            onPress={() => isFavorite(product.id) ? removeFavorite(product.id) : addFavorite(product.id)}
+            onPress={() => isFavorite(product.$id) ? removeFavorite(product.$id) : addFavorite(product.$id)}
             activeOpacity={0.7}
             className="ml-4"
-            accessibilityLabel={isFavorite(product.id) ? 'Remove from favorites' : 'Add to favorites'}
+            accessibilityLabel={isFavorite(product.$id) ? 'Remove from favorites' : 'Add to favorites'}
           >
-            <Text className="text-3xl">{isFavorite(product.id) ? '❤️' : '🤍'}</Text>
+            <Text className="text-3xl">{isFavorite(product.$id) ? '❤️' : '🤍'}</Text>
           </TouchableOpacity>
         </View>
         <Text className="text-red-500 text-2xl font-bold mb-1">${product.price}</Text>

@@ -26,7 +26,7 @@ export default function OrderSuccessScreen() {
       <Text className="text-gray-700 text-base mb-4 text-center">We're preparing your order and will notify you when it ships.</Text>
       {order ? (
         <View className="bg-white/90 rounded-2xl p-6 mb-4 mx-4 shadow w-full max-w-md">
-          <Text className="text-black font-bold mb-1">Order #{order.id}</Text>
+          <Text className="text-black font-bold mb-1">Order #{(order as any).$id}</Text>
           <Text className="text-gray-700 mb-1">Date: {new Date(order.date).toLocaleString()}</Text>
           <Text className="text-gray-700 mb-1">Total: ${order.total.toFixed(2)}</Text>
           <Text className="mb-1">Status: <Text className={order.status === 'cancelled' ? 'text-red-400' : order.status === 'delivered' ? 'text-green-400' : 'text-yellow-500'}>{order.status || 'processing'}</Text></Text>
