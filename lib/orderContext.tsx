@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Order, CartItem, Address, PaymentMethod } from './types';
 import { Alert } from 'react-native';
 import { createOrder as createOrderApi, fetchOrders as fetchOrdersApi } from './ordersApi';
+import { account } from './appwrite';
 
 interface OrderContextType {
   orders: Order[];
@@ -14,15 +15,19 @@ const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadOrders();
+    (async () => {
+      const user = await account.get();
+      setUserId(user.$id);
+      await loadOrders(user.$id);
+    })();
   }, []);
 
-  const loadOrders = async () => {
+  const loadOrders = async (uid: string) => {
     try {
-      // For now, fetch all orders (no user filtering)
-      const fetched = await fetchOrdersApi('');
+      const fetched = await fetchOrdersApi(uid);
       setOrders((fetched as unknown as Order[]));
     } catch (error) {
       Alert.alert('Error', 'Failed to load orders from Appwrite.');
@@ -38,7 +43,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         trackingNumber: undefined,
         estimatedDelivery: undefined,
       });
-      await loadOrders();
+      if (userId) await loadOrders(userId);
       return newOrder as unknown as Order;
     } catch (error) {
       Alert.alert('Error', 'Failed to create order.');
@@ -49,7 +54,6 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const clearOrders = () => setOrders([]);
 
   const cancelOrder = async (orderId: string) => {
-    // For now, just update locally. To persist, you would update the order in Appwrite.
     const updatedOrders = orders.map(order =>
       (order as any).$id === orderId
         ? { ...order, status: 'cancelled' as const }

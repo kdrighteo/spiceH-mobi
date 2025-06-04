@@ -6,7 +6,7 @@ import { useCart } from '../../lib/cartContext';
 import CartButton from '../components/CartButton';
 import { useFavorites } from '../../lib/favoritesContext';
 import FavoritesButton from '../components/FavoritesButton';
-import { getReviews, addReview, getAverageRating, Review } from '../../lib/reviews';
+import { getReviewsForProduct, addReviewToAppwrite } from '../../lib/reviewsApi';
 import OrdersButton from '../components/OrdersButton';
 import ProfileButton from '../components/ProfileButton';
 import ReviewItem from '../components/ReviewItem';
@@ -27,12 +27,10 @@ export default function ProductDetails() {
   const [qty, setQty] = useState(1);
   const { addToCart } = useCart();
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
-  const [avgRating, setAvgRating] = useState(0);
-  const [reviewCount, setReviewCount] = useState(0);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [zoomVisible, setZoomVisible] = useState(false);
 
@@ -44,11 +42,8 @@ export default function ProductDetails() {
         setProduct(prod);
         setLoading(false);
         if (prod) {
-          const productReviews = await getReviews(prod.$id);
+          const productReviews = await getReviewsForProduct(prod.$id);
           setReviews(productReviews);
-          const avgData = await getAverageRating(prod.$id);
-          setAvgRating(avgData.avg);
-          setReviewCount(avgData.count);
         }
       })();
     }
@@ -79,12 +74,9 @@ export default function ProductDetails() {
   const handleSubmitReview = async () => {
     if (!reviewText.trim()) return;
     setSubmitting(true);
-    await addReview(product.$id, reviewRating, reviewText);
-    const updatedReviews = await getReviews(product.$id);
+    await addReviewToAppwrite(product.$id, reviewRating, reviewText);
+    const updatedReviews = await getReviewsForProduct(product.$id);
     setReviews(updatedReviews);
-    const avgData = await getAverageRating(product.$id);
-    setAvgRating(avgData.avg);
-    setReviewCount(avgData.count);
     setReviewText('');
     setReviewRating(5);
     setSubmitting(false);
@@ -139,6 +131,10 @@ export default function ProductDetails() {
       </Modal>
     </View>
   );
+
+  // Calculate average rating and review count from reviews array
+  const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
+  const reviewCount = reviews.length;
 
   const renderReviews = () => (
     <View>

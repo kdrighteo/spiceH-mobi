@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Alert, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { getAllReviews, deleteReview, Review } from '../lib/reviews';
 import { fetchProducts } from '../lib/productsApi';
+import { getReviewsForProduct, deleteReviewFromAppwrite } from '../lib/reviewsApi';
+import { account } from '../lib/appwrite';
 import CartButton from './components/CartButton';
 import FavoritesButton from './components/FavoritesButton';
 import OrdersButton from './components/OrdersButton';
@@ -11,28 +12,36 @@ import { Product } from '../lib/types';
 
 export default function MyReviewsScreen() {
   const router = useRouter();
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const all = await getAllReviews();
+      setLoading(true);
+      const user = await account.get();
+      setUserId(user.$id);
       const prodData = await fetchProducts();
       setProducts((prodData as unknown as Product[]).filter(p => p.$id && p.name && p.description && p.price && p.image));
-      setReviews(all);
+      // Fetch all reviews for all products, then filter by userId
+      let allReviews: any[] = [];
+      for (const product of prodData) {
+        const productReviews = await getReviewsForProduct(product.$id);
+        allReviews = allReviews.concat(productReviews);
+      }
+      setReviews(allReviews.filter(r => r.userId === user.$id));
       setLoading(false);
     })();
   }, []);
 
-  const handleDelete = (review: Review) => {
+  const handleDelete = (review: any) => {
     Alert.alert('Delete Review', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        await deleteReview(review.productId, review.date);
-        const all = await getAllReviews();
-        setReviews(all);
+        await deleteReviewFromAppwrite(review.$id);
+        setReviews(reviews.filter(r => r.$id !== review.$id));
       } },
     ]);
   };
@@ -80,7 +89,7 @@ export default function MyReviewsScreen() {
     </View>
   );
 
-  const renderItem = ({ item }: { item: Review }) => {
+  const renderItem = ({ item }: { item: any }) => {
     const product = getProduct(item.productId);
     return (
       <View className="bg-white/90 rounded-2xl p-4 mb-4 mx-4 shadow">

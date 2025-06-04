@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, TextInput, Alert, Animated } fr
 import { useRouter } from 'expo-router';
 import { useCart } from '../lib/cartContext';
 import { useOrders } from '../lib/orderContext';
+import { useAuth } from '../lib/authContext';
 import AddressForm from './components/AddressForm';
 import CartButton from './components/CartButton';
 import FavoritesButton from './components/FavoritesButton';
@@ -25,6 +26,7 @@ export default function Checkout() {
   const router = useRouter();
   const { cart, clearCart } = useCart();
   const { addOrder } = useOrders();
+  const { currentUser } = useAuth();
   const PAYMENT_METHODS: PaymentMethod[] = [
     { id: '1', type: 'credit', last4: '4242', isDefault: true },
     { id: '2', type: 'debit', last4: '1234', isDefault: false },
@@ -94,6 +96,11 @@ export default function Checkout() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!currentUser) {
+      Alert.alert('Login Required', 'Please log in to place an order.');
+      router.push('/Login');
+      return;
+    }
     if (!selectedAddress) {
       Alert.alert('Error', 'Please select a shipping address');
       return;
@@ -120,7 +127,9 @@ export default function Checkout() {
       paymentMethod: selectedPaymentMethod,
     });
     clearCart();
-    router.push(`/orders/${newOrder.id}`);
+    if (newOrder && (newOrder as any).$id) {
+      router.push(`/orders/${(newOrder as any).$id}`);
+    }
   };
 
   const renderHeader = () => (
@@ -205,15 +214,9 @@ export default function Checkout() {
               className={`mr-4 p-4 rounded-2xl border-2 ${
                 selectedPaymentMethod.id === item.id ? 'border-red-600 bg-red-50' : 'border-gray-200 bg-white'
               }`}
-              style={{ width: 280 }}
             >
-              <Text className="text-2xl mb-2">
-                {item.type === 'credit' ? '💳' : item.type === 'debit' ? '🏦' : '🅿️'}
-              </Text>
-              <Text className="font-semibold text-gray-800 mb-2">
-                {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-              </Text>
-              <Text className="text-gray-600">•••• {item.last4}</Text>
+              <Text className="text-2xl mb-2">{item.type.toUpperCase()}</Text>
+              <Text className="font-semibold text-gray-800">{item.last4}</Text>
             </TouchableOpacity>
           </AnimatedCard>
         )}
@@ -278,4 +281,4 @@ export default function Checkout() {
       <CartButton />
     </View>
   );
-} 
+}

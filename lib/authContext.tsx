@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Alert } from 'react-native';
 import { account } from './appwrite';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ID } from 'appwrite';
 
 export type AuthContextType = {
   currentUser: any | null;
@@ -18,39 +19,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check AsyncStorage first
-    const checkStoredUser = async () => {
-      try {
-        const storedUser = await AsyncStorage.getItem('user');
-        if (storedUser) {
-          setCurrentUser(JSON.parse(storedUser));
-        }
-      } catch (error) {
-        console.error('Error reading stored user:', error);
-      }
-    };
-    checkStoredUser();
-
-    // Then check Appwrite session
-    const getCurrentUser = async () => {
-      try {
-        const user = await account.get();
-        setCurrentUser(user);
-        await AsyncStorage.setItem('user', JSON.stringify(user));
-      } catch (error) {
-        setCurrentUser(null);
-        await AsyncStorage.removeItem('user');
-      } finally {
-        setLoading(false);
-      }
-    };
-    getCurrentUser();
+    checkUser();
   }, []);
+
+  const checkUser = async () => {
+    try {
+      const user = await account.get();
+      setCurrentUser(user);
+      await AsyncStorage.setItem('user', JSON.stringify(user));
+    } catch (error) {
+      setCurrentUser(null);
+      await AsyncStorage.removeItem('user');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const signup = async (email: string, password: string, name: string) => {
     try {
-      await account.create('unique()', email, password, name);
-      // Automatically log in after sign up
+      // Use Appwrite's built-in unique ID generator
+      await account.create(ID.unique(), email, password, name);
       await account.createSession(email, password);
       const user = await account.get();
       setCurrentUser(user);
@@ -58,7 +46,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error: any) {
       console.error('Signup error:', error);
-      Alert.alert('Error', error.message || 'Failed to sign up. Please try again.');
+      if (error.message?.toLowerCase().includes('already exists')) {
+        Alert.alert('Error', 'This email is already registered. Please log in instead.');
+      } else {
+        Alert.alert('Error', `Failed to create account: ${error.message}`);
+      }
       return false;
     }
   };
@@ -66,26 +58,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       await account.createSession(email, password);
-      await account.createSession(email, password);
       const user = await account.get();
       setCurrentUser(user);
       await AsyncStorage.setItem('user', JSON.stringify(user));
       return true;
     } catch (error: any) {
       console.error('Login error:', error);
-      Alert.alert('Error', error.message || 'Failed to log in. Please try again.');
+      Alert.alert('Error', `Login failed: ${error.message}`);
       return false;
     }
   };
 
   const logout = async () => {
     try {
-      await account.deleteSession('current');
+      if (currentUser) {
+        await account.deleteSession('current');
+      }
       await AsyncStorage.removeItem('user');
       setCurrentUser(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Logout error:', error);
-      Alert.alert('Error', error.message || 'Failed to log out. Please try again.');
+      Alert.alert('Error', 'Failed to log out. Please try again.');
     }
   };
 

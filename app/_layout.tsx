@@ -6,15 +6,30 @@ import { FavoritesProvider } from "../lib/favoritesContext";
 import { OrderProvider } from '../lib/orderContext';
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LogBox } from 'react-native';
+
+// Ignore specific warnings
+LogBox.ignoreLogs([
+  'AsyncStorage has been extracted from react-native',
+  'Non-serializable values were found in the navigation state',
+]);
 
 export default function RootLayout() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const seen = await AsyncStorage.getItem('onboardingComplete');
-      setShowOnboarding(seen !== 'true');
-    })();
+    // Check if user has seen onboarding
+    const checkOnboarding = async () => {
+      try {
+        const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
+        setShowOnboarding(hasSeenOnboarding === null);
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        setShowOnboarding(true);
+      }
+    };
+
+    checkOnboarding();
   }, []);
 
   if (showOnboarding === null) return null;
@@ -24,7 +39,12 @@ export default function RootLayout() {
       <CartProvider>
         <FavoritesProvider>
           <OrderProvider>
-            <Stack>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'slide_from_right',
+              }}
+            >
               {showOnboarding
                 ? <Stack.Screen name="Onboarding" options={{ headerShown: false }} />
                 : [
